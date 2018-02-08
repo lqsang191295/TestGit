@@ -14,7 +14,8 @@ INSERT [dbo].[SYS_FormLabels] ([UserID], [Language], [FormName], [EntityName], [
 INSERT [dbo].[SYS_FormLabels] ([UserID], [Language], [FormName], [EntityName], [FieldName], [LabelName], [LabelType], [DefaultName], [CustomName], [Description], [IsGrid], [IsVisible], [IsSystem], [IsUserDefined], [TabOrder], [Version], [CreatedOn], [CreatedBy], [ModifiedOn], [ModifiedBy], [GridviewName]) VALUES (N'admin', N'VN', N'system', N'', NULL, N'HCSPR110', N'LVFunctionCaption', N'Định nghĩa bảng lương bằng tay', N'Định nghĩa bảng lương bằng tay', NULL, 0, 0, 0, 0, N'0', N'x01.00', CAST(N'2016-06-27T15:38:33.813' AS DateTime), N'admin', CAST(N'2017-10-02T17:31:27.963' AS DateTime), N'nlvphi', NULL)
 END
 GO
----
+---asdasdasdasdasd
+"Test thử xem sao "
 GO
 IF NOT EXISTS (SELECT * FROM dbo.sysobjects WHERE id = object_id(N'HCSLS_CustomePayrollField') AND OBJECTPROPERTY(id, N'IsTable') = 1)
 	BEGIN
