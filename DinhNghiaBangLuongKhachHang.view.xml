@@ -1,0 +1,632 @@
+﻿<mvc:View
+	height="100%"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns="sap.m"
+  xmlns:c="sap.ui.commons"
+  xmlns:core="sap.ui.core"
+  xmlns:l="sap.ui.layout"
+  xmlns:semantic="sap.m.semantic"
+  xmlns:f="sap.ui.layout.form"
+  xmlns:tnt="sap.tnt"
+  xmlns:u="sap.uxap"
+  xmlns:uni="sap.ui.unified"
+  xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  controllerName="hrm.HeThongTinhLuong.CacTinhNang.DinhNghiaBangLuongKhachHang">
+
+  <NavContainer id="mainNavCon" width="100%" class="navContainerControl">
+
+    <Page id="lst_DanhSach" title="{path:'res>/Định nghĩa bảng lương bằng tay',formatter:'.getRes'}" xmlns:mvc="sap.ui.core.mvc"
+                                showNavButton="true" navButtonPress="onNavBack">
+      <Dialog
+      id ="dialogGendateDetail"
+      title="{path:'res>/Chi tiết',formatter:'.getRes'}"
+      class="DialogNoPadding"
+      resizable="true"
+      draggable="true">
+        <content>
+          <VBox>
+            <f:Form editable="true" ariaLabelledBy="Title1" title="">
+              <f:layout>
+                <f:ResponsiveGridLayout
+                  labelSpanL="12"
+                  emptySpanL="1"
+                  labelSpanM="12"
+                  emptySpanM="0"
+                  columnsL="1"
+                  columnsM="1"/>
+              </f:layout>
+              <f:formContainers>
+                <f:FormContainer>
+                  <f:formElements>
+                    <f:FormElement label="{path:'res>/Title VN',formatter:'.getRes'}">
+                      <f:fields>
+                        <Input
+                           value="{path:'dataItemDetailGendate>/Title1'}"
+                           placeholder="{path:'res>/Title VN',formatter:'.getRes'}"
+                           type="Text">
+                        </Input>
+                      </f:fields>
+                    </f:FormElement>
+                    <f:FormElement label="{path:'res>/Title EN',formatter:'.getRes'}">
+                      <f:fields>
+                        <Input
+                            id="txtDlgAutoCode"
+                            value="{path:'dataItemDetailGendate>/Title2'}"
+                            placeholder="{path:'res>/Title EN',formatter:'.getRes'}"
+                            type="Text"/>
+                      </f:fields>
+                    </f:FormElement>
+                    <f:FormElement label="{path:'res>/Content VN',formatter:'.getRes'}">
+                      <f:fields>
+                        <Input
+                           class="InputRequired"
+                            id="txtDlgWFactorCode"
+                            value="{path:'dataItemDetailGendate>/Content1'}"
+                            placeholder="{path:'res>/Content VN',formatter:'.getRes'}"
+                            type="Text"/>
+                      </f:fields>
+                    </f:FormElement>
+                    <f:FormElement label="{path:'res>/Content EN',formatter:'.getRes'}">
+                      <f:fields>
+                        <Input
+                            id="txtDlgLastAutoCode"
+                            value="{path:'dataItemDetailGendate>/Content2'}"
+                            placeholder="{path:'res>/Content EN',formatter:'.getRes'}"
+                            type="Text"/>
+                      </f:fields>
+                    </f:FormElement>
+                    <f:FormElement label="{path:'res>/Ngày phát sinh',formatter:'.getRes'}">
+                      <f:fields>
+                        <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                        valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                     class="InputRequired"
+                                        placeholder="{path:'res>/Ngày phát sinh'}"
+                                        value="{path:'dataItemDetailGendate>/GenDate'}"
+                                        change="handleChange" />
+                      </f:fields>
+                    </f:FormElement>
+                    <f:FormElement label="{path:'res>/Ghi chú khác',formatter:'.getRes'}">
+                      <f:fields>
+                        <TextArea row="4"
+                                  width="100%"
+                                  value="{path:'dataItemDetailGendate>/Note'}"
+                                  placeholder="{path:'res>/Ghi chú khác',formatter:'.getRes'}"/>
+                      </f:fields>
+                    </f:FormElement>
+
+                  </f:formElements>
+                </f:FormContainer>
+              </f:formContainers>
+            </f:Form>
+          </VBox>
+        </content>
+        <buttons>
+          <Button
+            id="btnUpdateDlgEdit"
+            icon="sap-icon://save"
+            press="doSaveDialogDetailGendate"
+            tooltip="{path:'/sysLanRes/LVCommandBarButton/btnSave'}"/>
+        </buttons>
+        <buttons>
+          <Button
+            icon="sap-icon://cancel"
+            press="doCancelDialogEdit"
+            tooltip="{path:'/sysLanRes/LVCommandBarButton/btnCancel'}"/>
+        </buttons>
+      </Dialog>
+      <headerContent>
+        <core:Fragment id="frHomeSetting" fragmentName='hrm.commons.menuHomeSetting' type='XML' />
+      </headerContent>
+      <content>
+        <IconTabBar id="tabBarMKD" class="sapUiResponsiveContentPadding" stretchContentHeight="true" select="onSelectTabChanged">
+          <items>
+            <!--Tab 1-->
+            <IconTabFilter text="{path:'res>/Nhập thông tin lương',formatter:'.getRes'}" key="1">
+              <Page id="page1" showHeader="false">
+                <content>
+                  <SplitContainer id="splitContainerTab1" >
+                    <masterPages>
+                      <Page showHeader="false">
+                        <content>
+                          <f:Form editable="true" ariaLabelledBy="Title1">
+                            <f:layout>
+                              <f:ResponsiveGridLayout
+                                labelSpanL="5"
+                                emptySpanL="0"
+                                labelSpanM="5"
+                                emptySpanM="0"
+                                columnsL="2"
+                                columnsM="2"/>
+                            </f:layout>
+                            <f:formContainers>
+                              <f:FormContainer>
+                                <f:formElements>
+                                  <f:FormElement label="{path:'res>/Ngày phát sinh',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                                  valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                                  class="InputRequired"
+                                                  placeholder="{path:'res>/Ngày phát sinh'}"
+                                                  value="{path:'dataMaster>/GenDate'}"
+                                                  change="handleChange" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Payroll Template',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input id="cbbPayrollTemp"
+                                             class="lv-hcs-autokey-input InputRequired"
+                                             type="Text"
+                                             showSuggestion="true" showValueHelp="true"
+                                             placeholder="{path:'res>/Payroll Template',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Title VN',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input value="{path:'dataMaster>/Title1'}"
+                                             class="lv-hcs-autokey-input InputRequired"
+                                             type="Text"
+                                             placeholder="{path:'res>/Title VN',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Content VN',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input id = "cbbKyTinhLuong"
+                                             class="lv-hcs-autokey-input InputRequired"
+                                             type="Text"
+                                             value="{path:'dataMaster>/Content1'}"
+                                             placeholder="{path:'res>/Content VN',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Title EN',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input value="{path:'dataMaster>/Title2'}"
+                                             class="lv-hcs-autokey-input"
+                                             type="Text"
+                                             placeholder="{path:'res>/Title EN',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Content EN',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input value="{path:'dataMaster>/Content2'}"
+                                             class="lv-hcs-autokey-input"
+                                             type="Text"
+                                             placeholder="{path:'res>/Content EN',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Ghi chú khác',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <TextArea row="4"
+                                                     width="100%"
+                                                     value="{path:'dataMaster>/Note'}"
+                                                     placeholder="{path:'res>/Ghi chú khác',formatter:'.getRes'}"/>
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                </f:formElements>
+                              </f:FormContainer>
+                            </f:formContainers>
+                          </f:Form>
+                        </content>
+                        <footer>
+                          <ToolBar>
+                            <Button
+                              tooltip="{path:'res>/Lọc nhân viên',formatter:'.getRes'}"
+                              icon="sap-icon://filter"
+                              text="{path:'res>/Lọc nhân viên',formatter:'.getRes'}"
+                              press="onPressFilter"/>
+                            <ToolbarSpacer/>
+
+                          </ToolBar>
+                        </footer>
+                      </Page>
+                    </masterPages>
+                    <detailPages>
+                      <!--Trang danh sách nhân viên-->
+                      <Page id="detail" showHeader="false" >
+                        <content>
+                          <ScrollContainer id="pgContainer" height="100%" width="100%" horizontal="true" vertical="true"
+                                            focusable="false">
+
+                          </ScrollContainer>
+                        </content>
+                        <footer>
+                          <ToolBar>
+                            <ToolbarSpacer/>
+                            <Button
+                                tooltip="{path:'res>/Xuất khẩu',formatter:'.getRes'}"
+                                icon="sap-icon://arrow-bottom"
+                                press="onPressExportData"/>
+                            <Button
+                                tooltip="{path:'res>/Nhập khẩu',formatter:'.getRes'}"
+                                icon="sap-icon://arrow-top"
+                                press="onPressImportFiles"/>
+                            <Button
+                                tooltip="{path:'res>/Lưu',formatter:'.getRes'}"
+                                icon="sap-icon://save"
+                                press="onPressSaveData"/>
+                          </ToolBar>
+                        </footer>
+                      </Page>
+                    </detailPages>
+                  </SplitContainer>
+                </content>
+                
+              </Page>
+            </IconTabFilter>
+            <!--End Tab 1-->
+            <!--Tab 2-->
+            <IconTabFilter text="{path:'res>/Quản lý thông tin lương',formatter:'.getRes'}" key="2">
+              <Page showHeader="false">
+                <content>
+                  <SplitContainer id="splitContainer" >
+                    <masterPages>
+
+                      <Page showHeader="false">
+                        <content>
+                          <f:Form editable="true" ariaLabelledBy="Title1">
+                            <f:layout>
+                              <f:ResponsiveGridLayout
+                                labelSpanL="12"
+                                emptySpanL="0"
+                                labelSpanM="12"
+                                emptySpanM="0"
+                                columnsL="1"
+                                columnsM="1"/>
+                            </f:layout>
+                            <f:formContainers>
+                              <f:FormContainer>
+                                <f:formElements>
+
+                                  <f:FormElement label="{path:'res>/Payroll Template',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input id="cbbPayrollTempTab2"
+                                             class="lv-hcs-autokey-input InputRequired"
+                                             type="Text"
+                                             showSuggestion="true" showValueHelp="true"
+                                             placeholder="{path:'res>/Payroll Template',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Từ ngày',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                                  valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                                  placeholder="{path:'res>/Từ ngày'}"
+                                                  class="InputRequired"
+                                                  value="{path:'dataFilterByTime>/FromTime'}"
+                                                  change="handleChange" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Đến ngày',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                                  valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                                  placeholder="{path:'res>/Đến ngày'}"
+                                                  class="InputRequired"
+                                                  value="{path:'dataFilterByTime>/ToTime'}"
+                                                  change="handleChange" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                </f:formElements>
+                              </f:FormContainer>
+                            </f:formContainers>
+                          </f:Form>
+                        </content>
+                        <footer>
+                          <ToolBar>
+                            <ToolbarSpacer/>
+                            <Button
+                                tooltip="{path:'res>/Đọc dữ liệu',formatter:'.getRes'}"
+                                icon="sap-icon://detail-view"
+                                press="onPressReadDataByTime"/>
+                          </ToolBar>
+                        </footer>
+                      </Page>
+                    </masterPages>
+                    <detailPages>
+                      <NavContainer id="navConfig" width="100%">
+
+                        <!--Trang danh sách list gendate-->
+                        <Page id="page2Master" showHeader="false">
+                          <subHeader>
+                            <Toolbar>
+                              <SearchField id="searchLstGendate"  placeholder="{path:'/sysLanRes/LVCommandBarButton/txtSearch'}" search="onSearchDataGenDateTab2" class="sapUiTinyMarginBegin"/>
+                              <ToolbarSpacer/>
+                              <!--<Button id="btnFullScreenGendate" press="viewFullScreen" icon="sap-icon://full-screen"/>-->
+                            </Toolbar>
+                          </subHeader>
+                          <content>
+                            <Page showHeader="false">
+                              <content>
+                                <Table id="tbLstGendate"
+                                           inset="false"
+                                           select="onSelectTab3"
+                                           items="{path:'dataTab2LstGendate>/'}"
+                                           selectionChange=""
+                                           mode="MultiSelect"
+                                           growing="true"
+                                           growingThreshold="100" growingScrollToLoad="true"
+                                           fixedLayout="false" >
+                                  <columns>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Title VN',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Title EN',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Content VN',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Content EN',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Ngày phát sinh',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                      <ObjectIdentifier title="{path:'res>/Ghi chú khác',formatter:'.getRes'}" />
+                                    </Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true" hAlign="Left">
+                                    </Column>
+                                  </columns>
+                                  <items>
+                                    <ColumnListItem type="Navigation" press="onShowDetailEmployee" app:currentGendate="{path:'dataTab2LstGendate>'}" >
+                                      <cells>
+                                        <Text text="{path:'dataTab2LstGendate>Title1'}"/>
+                                        <Text text="{path:'dataTab2LstGendate>Title2'}"/>
+                                        <Text text="{path:'dataTab2LstGendate>Content1'}"/>
+                                        <Text text="{path:'dataTab2LstGendate>Content2'}"/>
+                                        <Text text="{path:'dataTab2LstGendate>GenDate', formatter:'lv.formatDate'}"/>
+                                        <Text text="{path:'dataTab2LstGendate>Note'}"/>
+                                        <core:Icon src="sap-icon://detail-view" tooltip="{path:'res>/Chi tiết',formatter:'.getRes'}"
+                                                                                     press="onSelectTableItemLstGendate" class="sapUiTinyMarginBegin sapUiTinyMarginEnd" />
+                                      </cells>
+                                    </ColumnListItem>
+                                  </items>
+                                </Table>
+                              </content>
+                            </Page>
+                          </content>
+                          <footer>
+                            <ToolBar>
+                              <ToolbarSpacer/>
+                              <Button
+                                  tooltip="{path:'res>/Xóa',formatter:'.getRes'}"
+                                  icon="sap-icon://delete"
+                                  press="onPressDeleteDataGenDateTab2"/>
+                            </ToolBar>
+                          </footer>
+                        </Page>
+                        <!--Trang danh sách nhân viên-->
+                        <Page id="page2DetailLstEmp" showHeader="true" title="{path:'res>/Chi tiết',formatter:'.getRes'}" showNavButton="true" navButtonPress="onNavBackPage">
+                          <subHeader>
+                            <Toolbar>
+                              <SearchField id="searchEmployee"  placeholder="{path:'/sysLanRes/LVCommandBarButton/txtSearch'}" search="doSearchLstEmpTab2" class="sapUiTinyMarginBegin"/>
+                              <ToolbarSpacer/>
+                              <!--<Button id="btnFullScreen2" press="viewFullScreen" icon="sap-icon://full-screen"/>-->
+                            </Toolbar>
+                          </subHeader>
+                          <content>
+                            <Page showHeader="false">
+                              <content>
+                                <ScrollContainer id="pgContainerTab2" height="100%" width="100%" horizontal="true" vertical="true"
+                                      focusable="false">
+
+                                </ScrollContainer>
+                              </content>
+                            </Page>
+                          </content>
+                          <footer>
+                            <ToolBar>
+                              <ToolbarSpacer/>
+                              <Button
+                                  tooltip="{path:'res>/Xuất khẩu',formatter:'.getRes'}"
+                                  icon="sap-icon://arrow-bottom"
+                                  press="onPressExportDataEmpTab2"/>
+                              <Button
+                                  tooltip="{path:'res>/Nhập khẩu',formatter:'.getRes'}"
+                                  icon="sap-icon://arrow-top"
+                                  press="onPressImportFilesEmpTab2"/>
+                              <Button
+                                  tooltip="{path:'res>/Xóa',formatter:'.getRes'}"
+                                  icon="sap-icon://delete"
+                                  press="onPressDeleteDataTab2"/>
+                            </ToolBar>
+                          </footer>
+                        </Page>
+                        <!--Trang detail danh sách nhân viên-->
+                        <Page id="page2Detail" showHeader="false">
+                          <content>
+                            <Page showHeader="true" title="{path:'res>/Chi tiết',formatter:'.getRes'}"  showNavButton="true" navButtonPress="onNavBackPageLstEmp">
+                              <content>
+                                <ScrollContainer id="pgContainerDetailTab2" height="100%" width="100%" horizontal="true" vertical="true"
+                                    focusable="false">
+                                </ScrollContainer>
+                              </content>
+                              <footer>
+                                <ToolBar>
+                                  <ToolbarSpacer/>
+                                  <Button
+                                      tooltip="{path:'res>/Lưu',formatter:'.getRes'}"
+                                      icon="sap-icon://save"
+                                      press="onPressSaveDataDetailTab2"/>
+                                </ToolBar>
+                              </footer>
+                            </Page>
+                          </content>
+
+                        </Page>
+
+                      </NavContainer>
+                    </detailPages>
+                  </SplitContainer>
+                </content>
+              </Page>
+            </IconTabFilter>
+            <!--End Tab 2-->
+            <!--Tab 3-->
+            <IconTabFilter text="{path:'res>/Quản lý thông tin lương theo nhân viên',formatter:'.getRes'}" key="3">
+              <Page showHeader="false">
+                <content>
+                  <SplitContainer id="splitContainerTab3" >
+                    <masterPages>
+
+                      <Page showHeader="false">
+                        <content>
+                          <f:Form editable="true" ariaLabelledBy="Title1">
+                            <f:layout>
+                              <f:ResponsiveGridLayout
+                                labelSpanL="12"
+                                emptySpanL="0"
+                                labelSpanM="12"
+                                emptySpanM="0"
+                                columnsL="1"
+                                columnsM="1"/>
+                            </f:layout>
+                            <f:formContainers>
+                              <f:FormContainer>
+                                <f:formElements>
+
+                                  <f:FormElement label="{path:'res>/Payroll Template',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input id="cbbPayrollTempTab3"
+                                             class="lv-hcs-autokey-input InputRequired"
+                                             type="Text"
+                                             showSuggestion="true" showValueHelp="true"
+                                             placeholder="{path:'res>/Payroll Template',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Từ ngày',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                                  valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                                  class="InputRequired"
+                                                  placeholder="{path:'res>/Từ ngày'}"
+                                                  value="{path:'dataFilterByTimeAndEmpCode>/FromTime'}"
+                                                  change="handleChange" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Đến ngày',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <DatePicker displayFormat="{path:'/loginInfo/DateFormat'}"
+                                                  valueFormat="yyyy-MM-ddTHH:mm:ss"
+                                                  class="InputRequired"
+                                                  placeholder="{path:'res>/Đến ngày'}"
+                                                  value="{path:'dataFilterByTimeAndEmpCode>/ToTime'}"
+                                                  change="handleChange" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                  <f:FormElement label="{path:'res>/Mã nhân viên',formatter:'.getRes'}">
+                                    <f:fields>
+                                      <Input id="cbbEmployeeCode"
+                                         class="lv-hcs-autokey-input InputRequired"
+                                         showSuggestion="true" showValueHelp="true"
+                                         type="Text"
+                                         placeholder="{path:'res>/Mã nhân viên',formatter:'.getRes'}" />
+                                    </f:fields>
+                                  </f:FormElement>
+
+                                </f:formElements>
+                              </f:FormContainer>
+                            </f:formContainers>
+                          </f:Form>
+                        </content>
+                        <footer>
+                          <ToolBar>
+                            <ToolbarSpacer/>
+                            <Button
+                                tooltip="{path:'res>/Đọc dữ liệu',formatter:'.getRes'}"
+                                icon="sap-icon://detail-view"
+                                press="onPressReadDataByTimeAndEmpCode"/>
+                          </ToolBar>
+                        </footer>
+                      </Page>
+                    </masterPages>
+                    <detailPages>
+                      <NavContainer id="navConfigTab3" width="100%">
+                        <!--Trang danh sách nhân viên-->
+                        <Page id="detailTab3" showHeader="false" >
+                          <subHeader>
+                            <Toolbar>
+                              <SearchField id="searchEmployeeTab3"  placeholder="{path:'/sysLanRes/LVCommandBarButton/txtSearch'}" search="doSearchLstEmpTab3" class="sapUiTinyMarginBegin"/>
+                              <ToolbarSpacer/>
+                              <!--<Button id="btnFullScreen3" press="viewFullScreen" icon="sap-icon://full-screen"/>-->
+                            </Toolbar>
+                          </subHeader>
+                          <content>
+                            <Page showHeader="false">
+                              <content>
+                                <ScrollContainer id="pgContainerTab3" height="100%" width="100%" horizontal="true" vertical="true"
+                                      focusable="false">
+
+                                </ScrollContainer>
+                              </content>
+                            </Page>
+                          </content>
+                          <footer>
+                            <ToolBar>
+                              <ToolbarSpacer/>
+                              <Button
+                                    tooltip="{path:'res>/Xuất khẩu',formatter:'.getRes'}"
+                                    icon="sap-icon://arrow-bottom"
+                                    press="onPressExportDataEmpTab3"/>
+                              <Button
+                                  tooltip="{path:'res>/Nhập khẩu',formatter:'.getRes'}"
+                                  icon="sap-icon://arrow-top"
+                                  press="onPressImportFilesEmpTab3"/>
+                              <Button
+                                tooltip="{path:'res>/Xóa',formatter:'.getRes'}"
+                                icon="sap-icon://delete"
+                                press="onPressDeleteDataTab3"/>
+                            </ToolBar>
+                          </footer>
+                        </Page>
+                        <!--Trang detail danh sách nhân viên-->
+                        <Page id="page3Detail" showHeader="false" >
+                          <content>
+                            <Page showHeader="true" title="{path:'res>/Chi tiết',formatter:'.getRes'}" showNavButton="true" navButtonPress="onNavBackPage3">
+                              <content>
+                                <ScrollContainer id="pgContainerDetailTab3" height="100%" width="100%" horizontal="true" vertical="true"
+                                    focusable="false">
+                                </ScrollContainer>
+                              </content>
+                              <footer>
+                                <ToolBar>
+                                  <ToolbarSpacer/>
+                                  <Button
+                                      tooltip="{path:'res>/Lưu',formatter:'.getRes'}"
+                                      icon="sap-icon://save"
+                                      press="onPressSaveDataDetailTab3"/>
+                                </ToolBar>
+                              </footer>
+                            </Page>
+                          </content>
+
+                        </Page>
+                      </NavContainer>
+                    </detailPages>
+                  </SplitContainer>
+                </content>
+              </Page>
+            </IconTabFilter>
+            <!--End Tab 3-->
+          </items>
+        </IconTabBar>
+      </content>
+    </Page>
+    <core:Fragment id="frmEmployeeFilter" fragmentName='hrm.commons.dialogEmployeeFilter' type='XML' />
+  </NavContainer>
+  <core:Fragment id="frmLockData" fragmentName='hrm.commons.LockDataHSLT' type='XML' />
+</mvc:View>
