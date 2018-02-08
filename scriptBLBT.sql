@@ -16,6 +16,7 @@ END
 GO
 ---asdasdasdasdasd
 "Test thử xem sao Giờ t lại test típ xem sao zzzzzzzzzzzzz" 
+"Giờ t thêm 1 dòng thử"
 GO
 IF NOT EXISTS (SELECT * FROM dbo.sysobjects WHERE id = object_id(N'HCSLS_CustomePayrollField') AND OBJECTPROPERTY(id, N'IsTable') = 1)
 	BEGIN
