@@ -15,7 +15,8 @@ INSERT [dbo].[SYS_FormLabels] ([UserID], [Language], [FormName], [EntityName], [
 END
 GO
 ---asdasdasdasdasd
-"Test thử xem sao Giờ t lại test típ xem sao zzzzzzzzzzzzz" 
+"AAAAAAAAAAA hihihi đồ ngốc"
+"Test thử xem sao Giờ t lại test típ xem sao zzzzzzzzzzzzz bbbbbbbbbbbbbb" 
 GO
 IF NOT EXISTS (SELECT * FROM dbo.sysobjects WHERE id = object_id(N'HCSLS_CustomePayrollField') AND OBJECTPROPERTY(id, N'IsTable') = 1)
 	BEGIN
