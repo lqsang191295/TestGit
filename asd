@@ -11,3 +11,14 @@
 				</li>
         
         <ul class="portfolio_slider_wrap">
+
+
+tdArr[idx++] = '<td data-field="' + column.field + '"';
+						tdArr[idx++] = ' class="' + classes.join(' ') + '"';
+						tdArr[idx++] = '>';
+						tdArr[idx++] = Plugin.getObject(column.field, row);
+						tdArr[idx++] = '<label class="m-checkbox">' +
+									   '<input type="checkbox" checked="checked">' +
+																		'Checked' +
+																		'<span></span>'
+																	'</label></td>';
