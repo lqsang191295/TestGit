@@ -74,3 +74,58 @@ db.getCollection("lv.SYS_FunctionList").aggregate([
     }
     
 ])
+
+===================================================== Lookup có Where 
+
+db.getCollection("lv.HCSSYS_Modules").aggregate([
+        {
+            "$sort": {"sorting": 1}
+        }, {
+            "$match": {
+                "module_type": "portal"
+            }
+        }, {
+        "$lookup":
+           {
+                "from": 'lv.HCSSYS_FunctionListLabel',
+                "let": { "module_code": "$module_code" },
+                "pipeline": [
+                    { "$match":
+                        { "$expr":
+                            {
+                                "$and": [
+                                    {
+                                        "$eq": ["$language", "EN"]
+                                    }, {
+                                        "$eq": [ "$function_id",  "$$module_code" ]
+                                    }, {
+                                        "$eq": ["$application", "HCSSYS_Modules"]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    { "$project": { "function_id": 1, "language": 1, "default_name": 1, "custom_name": 1, "description": 1 } }
+                ],
+                "as": "stockdata"
+            }
+        }, {
+            "$unwind": "$stockdata"
+        }, {
+            "$project": {
+                "module_code": 1,
+                "module_name": 1,
+                "module_type": 1,
+                "url":         1,
+                "redirect_url": 1,
+                "is_active":   1,
+                "sorting": 1,
+                "is_new_tab": 1,
+                "default_name": "$stockdata.default_name",
+                "custom_name": "$stockdata.custom_name",
+                "description": "$stockdata.description",
+                "function_id": "$stockdata.function_id",
+            }
+        }
+
+    ])
