@@ -1,0 +1,142 @@
+
+app.directive('ngRightClick', function($parse) {
+    return function(scope, element, attrs) {
+        var fn = $parse(attrs.ngRightClick);
+        element.bind('contextmenu', function(event) {
+            scope.$apply(function() {
+                event.preventDefault();
+                fn(scope, {$event:event});
+            });
+        });
+    };
+});
+
+
+-----------------------
+
+$scope.$dataPin = {};
+    $scope.$root.decrement = function (data, event){
+        // Avoid the real one
+        event.preventDefault();
+        $scope.$root.$dataPin = data;
+        $scope.$root.$applyAsync();
+        console.log($scope.$root.$dataPin)
+        // Show contextmenu
+        if($(event.target).closest(".hcs-function-style").length > 0) {
+            if($(".custom-menu").css("display") == "none"){
+                $(".custom-menu").toggle(100).
+                css({
+                    top: (event.pageY ) + "px",
+                    left: event.pageX + "px"
+                });
+            } else {
+                $(".custom-menu").css("display", "none");
+                $(".custom-menu").toggle(100).
+                css({
+                    top: (event.pageY ) + "px",
+                    left: event.pageX + "px"
+                });
+            }
+        }
+    }
+
+    $scope.$root.PinTab = function(){
+        debugger
+        services.api("${get_api_key('app_main.api.sys_functionlist_favarite/insert')}")
+            .data({
+                data: $scope.$root.$datapin
+            })
+            .done()
+            .then(function (res) {
+                //set hcssys_systemconfig
+                $scope.$root.systemconfig = res;
+            })
+    }
+    
+    $(window).bind("click", function (e) {
+        var isMenu = $(e.target).closest(".hcs-menu-list").length > 0;
+        var isMessage = $(e.target).closest(".hcs-message-list").length > 0;
+        if (!isMenu && !isMessage) {
+            $("#btnShowMenu").siblings(".hcs-menu-list").addClass("menu-hidden");
+            $("#btnShowMessage").siblings(".hcs-message-list").addClass("message-hidden");
+        }
+
+        if($(".custom-menu").css("display") == "block"){
+            $(".custom-menu").css("display", "none")
+        }
+    });
+    
+    ----------- from SYS_FunctionList_Favarite import SYS_FunctionList_Favarite
+    
+    
+    <tile-box ng-repeat="child in function.child_items"
+                                  title="{{child.custom_name_lb}}"
+                                  description="{{child.description_lb}}"
+                                  width="{{child.width}}"
+                                  icon="{{child.icon}}"
+                                  number="{{child.number}}"
+                                  image="{{child.image}}"
+                                  color="{{(child.color && child.color.background) ? child.color : function.color}}"
+                                  ng-click="handleEvent.redirectPage(child)"
+                                  ng-right-click="$root.decrement(child, $event)">
+                        </tile-box>
+                        
+                        
+                        
+                        
+                        <ul class='custom-menu'>
+          <li>
+              <span class="sap-icon sap-appointment" ng-click="$root.PinTab()"></span> Pin
+          </li>
+          <li>
+              <span class="sap-icon sap-appointment"></span> UnPin
+          </li>
+        </ul>
+        
+        
+        
+        
+        .custom-menu {
+    display: none;
+    z-index:1000;
+    position: fixed;
+    background-color:#fff;
+    border: 1px solid #ddd;
+    overflow: hidden;
+    width: 120px;
+    white-space:nowrap;
+    font-family: sans-serif;
+-webkit-box-shadow: 2px 2px 7px 0px rgba(50, 50, 50, 0.5);
+-moz-box-shadow:    2px 2px 7px 0px rgba(50, 50, 50, 0.5);
+box-shadow:         2px 2px 7px 0px rgba(50, 50, 50, 0.5);
+}
+
+.custom-menu ul {
+    list-style: none;
+}
+
+.custom-menu li {
+    padding: 5px 10px;
+    list-style: none;
+}
+
+.custom-menu li:hover {
+    background-color: #4679BD;
+    color: #fff;
+    cursor: pointer;
+}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
