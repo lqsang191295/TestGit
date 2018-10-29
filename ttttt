@@ -1,0 +1,142 @@
+<header class="sapMPanelWrappingDivTb sapMPanelWrappingDivTbExpanded" style="/* padding-left: 66px; */padding: 20px 66px;/* padding-right: 66px; */-webkit-tap-highlight-color: rgba(0, 0, 0, 0);/* border-bottom-color: rgb(204, 204, 204); *//* border-bottom-style: solid; *//* border-bottom-width: 1px; */padding-bottom: 20px;/* padding-left: 66px; *//* padding-right: 66px; */padding-top: 20px;position: relative;text-size-adjust: none;">
+  <span id="panel_HCSEM-CollapsedImg" title="Mở rộng/Thu gọn" class="sap-icon sap-navigation-down-arrow" style="1: cursor
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    /* color: rgb(102, 102, 102); */
+    /* cursor: pointer; */
+    /* display: inline-block; */
+    /* font-size: 1rem; */
+    /* line-height: 1.5rem; */
+    /* margin-bottom: 0px; */
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+    margin-top: 0px;
+    position: absolute;
+    text-align: center;
+    text-size-adjust: none;
+    top: 40%;
+    /* transition-delay: 0s; */
+    /* transition-duration: 0.4s; */
+    /* transition-property: all; */
+    /* transition-timing-function: ease-out; */
+    vertical-align: baseline;
+    width: 1.5rem;
+"></span>
+    <div class="sapMIBar sapMPanelHeaderTB sapMTB sapMTB-Transparent-CTX sapMTBInactive sapMTBNewFlex sapMTBStandard" style="
+    -webkit-box-align: center;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    align-items: center;
+    background-attachment: initial;
+    background-clip: initial;
+    background-color: transparent;
+    background-image: initial;
+    background-origin: initial;
+    background-position-x: initial;
+    background-position-y: initial;
+    background-repeat-x: initial;
+    background-repeat-y: initial;
+    background-size: initial;
+    border-bottom-color: rgb(204, 204, 204);
+    border-bottom-style: solid;
+    border-bottom-width: 0;
+    border-left-width: 0px;
+    border-right-width: 0px;
+    border-top-width: 0px;
+    box-sizing: border-box;
+    display: flex;
+    height: 75px !important;
+    margin-left: 3rem;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    /* padding-left: 0.75rem; */
+    text-size-adjust: none;
+    white-space: nowrap;
+">
+        <div class="sapMBarChild sapMFlexBox sapMFlexBoxAlignContentStretch sapMFlexBoxAlignItemsStretch sapMFlexBoxBGTransparent sapMFlexBoxJustifyStart sapMFlexBoxWrapNoWrap sapMVBox" style="0: flex-shrink
+    -webkit-box-align: stretch;
+    -webkit-box-orient: vertical;
+    -webkit-box-pack: start;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    align-content: stretch;
+    align-items: stretch;
+    background-color: transparent;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin-left: 0px;
+    margin-right: 0.25rem;
+    text-size-adjust: none;
+">
+            <div class="sapMFlexBox sapMFlexBoxAlignContentStretch sapMFlexBoxAlignItemsStretch sapMFlexBoxBGTransparent sapMFlexBoxJustifyStart sapMFlexBoxWrapNoWrap sapMFlexItem sapMHBox" style="
+    -webkit-box-align: stretch;
+    -webkit-box-orient: horizontal;
+    -webkit-box-pack: start;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    align-content: stretch;
+    align-items: stretch;
+    background-color: transparent;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    position: relative;
+    text-size-adjust: none;
+">
+                <div id="__data31" style="order:0;flex-grow:0;flex-shrink:1;flex-basis:auto;min-height:auto;min-width:auto;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);align-self: auto;background-color: transparent;position: relative;text-size-adjust: none;" class="sapMFlexBoxBGTransparent sapMFlexItem sapMFlexItemAlignAuto">
+                    <div id="__title0" data-sap-ui="__title0" role="heading" class="lv-homepage-title-module sapMTitle sapMTitleMaxWidth sapMTitleNoWrap sapMTitleStyleAuto sapUiSelectable" style="
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    box-sizing: border-box;
+    color: rgb(51, 51, 51);
+    cursor: text;
+    display: inline-block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 1rem;
+    font-weight: normal;
+    margin-block-end: 0px;
+    margin-block-start: 0px;
+    margin-bottom: 0px;
+    margin-inline-end: 0px;
+    margin-inline-start: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    position: relative;
+    text-overflow: ellipsis;
+    text-shadow: rgba(255, 255, 255, 0.5) 0px 1px;
+    text-size-adjust: none;
+    white-space: nowrap;
+"><span id="__title0-inner" style="
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    text-size-adjust: none;
+    font-size: 36px !important;
+    color: #8a8a63 !important;
+    font-size: 36px !important;
+    color: #8a8a63 !important;
+    font-family: SegoeUI;
+">Hệ thống </span></div>
+                </div>
+                <div id="__data32" style="order:0;flex-grow:0;flex-shrink:1;flex-basis:auto;min-height:auto;min-width:auto" class="sapMFlexBoxBGTransparent sapMFlexItem sapMFlexItemAlignAuto">
+                    <div id="__title1" data-sap-ui="__title1" role="heading" class="lv-homepage-title-module-bold sapMTitle sapMTitleMaxWidth sapMTitleNoWrap sapMTitleStyleAuto sapUiSelectable" style="
+    font-size: 36px !important;
+    font-weight: bold !important;
+    padding-left: 10px;
+    /* font-family: segoe_ui_light,Arial,sans-serif !important; */
+"><span id="__title1-inner" style="
+    font-size: 36px !important;
+    font-weight: bold !important;
+    font-family: SegoeUI;
+"> Nhân Sự</span></div>
+                </div>
+            </div>
+            <div id="__data33" style="order:0;flex-grow:0;flex-shrink:1;flex-basis:auto;min-height:auto;min-width:auto" class="sapMFlexBoxBGTransparent sapMFlexItem sapMFlexItemAlignAuto">
+                <div id="__title2" data-sap-ui="__title2" role="heading" class="lv-homepage-title-module-description sapMTitle sapMTitleMaxWidth sapMTitleNoWrap sapMTitleStyleH6 sapUiSelectable"><span id="__title2-inner">Quản lý thông tin của nhân viên &amp; các vấn đề liên quan đến chính sách | trợ cấp | phúc lợi</span></div>
+            </div>
+        </div>
+    </div>
+</header>
