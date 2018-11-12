@@ -1,0 +1,1370 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using LV.HCS.Core;
+using LV.HCS.API_Attribute;
+using System.Net.Http;
+using System.Net;
+using System.Web;
+using Provider.Excel;
+using OfficeOpenXml;
+using LV.HCS.Portal.Language;
+using Newtonsoft.Json.Linq;
+using System.Collections;
+using OfficeOpenXml.Style;
+using Newtonsoft.Json;
+
+namespace LV.HCS.ExcelTemplate
+{
+    public partial class ExcelUtilities
+    {
+        // Hàm xuất excel bảng thanh toán lương
+        /// <summary>
+        /// Xuất khẩu excel cho tính năng soạn thảo quyết định
+        /// Sử dụng chung bảng HCSSYS_EmployeeExcelTemplate và HCSSYS_EmployeeExcelTemplateDetail với thiết lập template Excel HSNV
+        /// </summary>
+        /// <param name="context"></param>
+        [Privilege(PrivilegeEnum.Private)]
+        public static void ExportExcelBangThanhToanLuong(HttpContext context)
+        {
+            Hashtable requestParams = GetRequestByToken(context);
+            if (requestParams.Count != 0)
+            {
+                string customer = requestParams["customer"].ToString();
+                string SchemaName = requestParams["schemaname"].ToString();
+                string user = requestParams["user"].ToString();
+                string PrefixTableName = requestParams["prefixtablename"].ToString();
+                string ExcelTemplateID = requestParams["exceltemplateid"].ToString();
+                string Dow_Code = requestParams["Dow_Code"].ToString();
+                string BegDay = requestParams["BegDay"].ToString();
+                string EndDay = requestParams["EndDay"].ToString();
+                string securityKey = requestParams["securityKey"].ToString();
+
+                context.Response.Clear();
+
+                using (DB db = new DB(customer))
+                {
+                    string sSqlTemplate = "";
+                    //if (PrefixTableName == "SalaryTemplate")
+                    //{
+                    //    sSqlTemplate = "SELECT FileNameTemplate AS FileName, TemplateContent AS ContentSource FROM HCSSYS_ExcelTemplateDetail WHERE ExcelTemplateID = " + ExcelTemplateID;
+                    //}
+                    //else if (PrefixTableName == "QuickImportSalInfo")
+                    //{
+                    //    sSqlTemplate = "SELECT FileNameTemplate AS FileName, TemplateContent AS ContentSource FROM HCSSYS_ExcelTemplateDetail WHERE ExcelTemplateID = " + ExcelTemplateID;
+                    //}
+                    DataTable dtDowKs = null;
+
+                    // lấy data cho bảng timesheet
+                    if ((PrefixTableName.ToLower() == "TimeSheetTemplate".ToLower()) || (PrefixTableName.ToLower() == "AssignShiftTemplate".ToLower()))
+                    {
+                        // kiểm tra table có tồn tại hay không
+                        string table = "";
+
+                        if (PrefixTableName.ToLower() == "TimeSheetTemplate".ToLower())
+                        {
+                            table = PrefixTableName + "_" + ExcelTemplateID + "_" + user + "_TM_KowDs";
+                        }
+                        else if (PrefixTableName.ToLower() == "AssignShiftTemplate".ToLower())
+                        {
+                            table = PrefixTableName + "_" + ExcelTemplateID + "_" + user + "_TM_AssignShift";
+                        }
+
+                        string checkTb = "IF EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '" + table + "'  AND TABLE_SCHEMA = '" + SchemaName + "') SELECT 1 ELSE SELECT 0";
+                        System.Data.SqlClient.SqlCommand cmdChecktb = DataController.CreateCommand(customer);
+                        cmdChecktb.CommandText = checkTb;
+                        cmdChecktb.Connection.Open();
+                        int iCheck = Convert.ToInt32(cmdChecktb.ExecuteScalar());
+                        //cmdChecktb.Connection.Close();
+                        //
+                        if (iCheck == 1)
+                        {
+                            string sqlDowKs = "SELECT * FROM " + table;
+                            System.Data.SqlClient.SqlCommand cmdDataDowKs = DataController.CreateCommand(customer);
+                            cmdDataDowKs.CommandText = sqlDowKs;
+                            dtDowKs = DataController.Exec(customer, cmdDataDowKs);
+                            DataView dvDowKs = dtDowKs.DefaultView;
+                            dtDowKs = dvDowKs.ToTable();
+                        }
+                    }
+
+                    sSqlTemplate = "SELECT FileNameTemplate AS FileName, TemplateContent AS ContentSource FROM HCSSYS_ExcelTemplateDetail WHERE ExcelTemplateID = " + ExcelTemplateID + " AND UserID = '" + user + "'";
+                    var itemTemplate = db.ExecuteQuery<TemplateObject>(sSqlTemplate).FirstOrDefault();
+
+                    if (itemTemplate == null)
+                    {
+                        sSqlTemplate = "SELECT FileNameTemplate AS FileName, TemplateContent AS ContentSource FROM HCSSYS_ExcelTemplateDetail WHERE ExcelTemplateID = " + ExcelTemplateID + " AND IsApplyForAll = 1";
+                        itemTemplate = db.ExecuteQuery<TemplateObject>(sSqlTemplate).FirstOrDefault();
+                    }
+
+                    context.Response.Clear();
+                    context.Response.ContentType = "application/ms-excel";
+                    context.Response.AppendHeader("content-disposition", "inline; filename=" + itemTemplate.FileName);
+
+                    if (itemTemplate != null)
+                    {
+                        int idxSTT = 1;
+                        //Lấy dữ liệu cho Sum
+                        System.Data.SqlClient.SqlCommand cmdSum = DataController.CreateCommand(customer);
+                        cmdSum.CommandText = "SELECT * FROM HCSSYS_ExcelTemplateGrouping WHERE ExcelTemplateID = " + ExcelTemplateID + " AND UserID = '" + user + "'";
+                        DataTable tblDetailSum = DataController.Exec(customer, cmdSum);
+                        DataView dvSum = tblDetailSum.DefaultView;
+                        tblDetailSum = dvSum.ToTable();
+
+                        if (tblDetailSum.Rows.Count <= 0)
+                        {
+                            cmdSum = DataController.CreateCommand(customer);
+                            cmdSum.CommandText = "SELECT * FROM HCSSYS_ExcelTemplateGrouping WHERE ExcelTemplateID = " + ExcelTemplateID + " AND IsApplyForAll = 1";
+                            tblDetailSum = DataController.Exec(customer, cmdSum);
+                            dvSum = tblDetailSum.DefaultView;
+                            tblDetailSum = dvSum.ToTable();
+                            //
+                            var ExecStoreRquest = new ExecStoreRquest();
+                            var param = new Hashtable();
+                            param["UserID"] = user;
+                            param["ExcelTemplateID"] = ExcelTemplateID;
+                            param["IsSG"] = 1;
+                            ExecStoreRquest.Source = "HCSSYS_spAutoCreatDataGroupAndSort";
+                            ExecStoreRquest.Params = param;
+                            ExecStoreRquest.Customer = customer;
+                            ExecStoreRquest.SecurityKey = securityKey;
+                            LV.HCS.Core.Datasource.ExecStore(ExecStoreRquest);
+                        }
+
+                        Dictionary<int, bool> dicIsSum = new Dictionary<int, bool>();
+                        int s = 1;
+                        foreach (DataRow row in tblDetailSum.Rows)
+                        {
+
+                            dicIsSum.Add(s, Boolean.Parse(row["IsSum"].ToString()));
+                            s++;
+                        }
+
+                        //Lấy dữ liệu cho Sorted
+                        System.Data.SqlClient.SqlCommand cmdSort = DataController.CreateCommand(customer);
+                        cmdSort.CommandText = "SELECT * FROM HCSSYS_ExcelTemplateSorting WHERE ExcelTemplateID = " + ExcelTemplateID + " AND UserID = '" + user + "'";
+                        DataTable tblDetailSort = DataController.Exec(customer, cmdSort);
+                        DataView dvSort = tblDetailSort.DefaultView;
+                        tblDetailSort = dvSort.ToTable();
+
+                        if (tblDetailSort.Rows.Count <= 0)
+                        {
+                            cmdSort = DataController.CreateCommand(customer);
+                            cmdSort.CommandText = "SELECT * FROM HCSSYS_ExcelTemplateSorting WHERE ExcelTemplateID = " + ExcelTemplateID + " AND IsApplyForAll = 1";
+                            tblDetailSort = DataController.Exec(customer, cmdSort);
+                            dvSort = tblDetailSort.DefaultView;
+                            tblDetailSort = dvSort.ToTable();
+                            //
+                            var ExecStoreRquest = new ExecStoreRquest();
+                            var param = new Hashtable();
+                            param["UserID"] = user;
+                            param["ExcelTemplateID"] = ExcelTemplateID;
+                            param["IsSG"] = 0;
+                            ExecStoreRquest.Source = "HCSSYS_spAutoCreatDataGroupAndSort";
+                            ExecStoreRquest.Params = param;
+                            ExecStoreRquest.Customer = customer;
+                            ExecStoreRquest.SecurityKey = securityKey;
+                            LV.HCS.Core.Datasource.ExecStore(ExecStoreRquest);
+                        }
+
+                        string strSort = "";
+                        foreach (DataRow row in tblDetailSort.Rows)
+                        {
+                            strSort += "[" + row["TableName"] + "." + row["FieldName"] + "] " + row["SortType"] + ",";
+                        }
+                        strSort = strSort.TrimEnd(',');
+                        //Lấy dữ liệu cho template (tên bảng, tên field, tên hiển thị);
+                        string str = "[" + SchemaName + "]." + "[" + PrefixTableName + "_" + ExcelTemplateID + "_" + user + "]";
+                        System.Data.SqlClient.SqlCommand _cmd = DataController.CreateCommand(customer);
+                        _cmd.CommandText = "SELECT * FROM " + str;
+                        DataTable tblDetail = DataController.Exec(customer, _cmd);
+                        DataView _dv = tblDetail.DefaultView;
+                        tblDetail = _dv.ToTable();
+                        // lấy data bảng SalaryTemplate_25_admin_GroupData
+                        string strGroupData = "[" + SchemaName + "]." + "[" + PrefixTableName + "_" + ExcelTemplateID + "_" + user + "_GroupData]";
+                        System.Data.SqlClient.SqlCommand cmdGroupData = DataController.CreateCommand(customer);
+                        cmdGroupData.CommandText = "SELECT * FROM " + strGroupData + " ORDER BY GroupIdx ASC";
+                        DataTable tblGroupData = DataController.Exec(customer, cmdGroupData);
+                        DataView dbGroupData = tblGroupData.DefaultView;
+                        tblGroupData = dbGroupData.ToTable();
+                        // Lay data bang group 
+                        System.Data.SqlClient.SqlCommand cmdGroupings = DataController.CreateCommand(customer);
+                        cmdGroupings.CommandText = "SELECT * FROM dbo.HCSSYS_ExcelTemplateGrouping WHERE ExcelTemplateID = " + ExcelTemplateID + " AND UserID = '" + user + "'";
+                        DataTable tblGroupings = DataController.Exec(customer, cmdGroupings);
+                        DataView dbGroupings = tblGroupings.DefaultView;
+                        tblGroupings = dbGroupings.ToTable();
+                        // lấy số cột của bảng HCSSYS_ExcelTemplateGrouping để biết có bn dòng group 
+                        int numberRowGroupings = db.HCSSYS_ExcelTemplateGroupings.Where(x => x.ExcelTemplateID.ToString() == ExcelTemplateID && x.UserID == user).ToList().Count;
+                        //
+                        byte[] ContentSource = itemTemplate.ContentSource.ToArray();
+                        var mm = new System.IO.MemoryStream();
+                        mm.Write(ContentSource, 0, ContentSource.Length);
+                        mm.Position = 0;
+                        using (var package = new ExcelPackage(mm))
+                        {
+                            var ws = package.Workbook.Worksheets[1];
+                            var exportPackage = new ExcelPackage();
+                            using (MemoryStream memStream = new MemoryStream(ContentSource))
+                            {
+                                exportPackage = new ExcelPackage(memStream);
+                            }
+                            //
+                            int idxSheet = 0;
+                            ExcelWorksheet[] arrWs = new ExcelWorksheet[exportPackage.Workbook.Worksheets.Count - 1];
+                            if (exportPackage.Workbook.Worksheets.Count > 1)
+                            {
+                                for (int i = 2; i <= exportPackage.Workbook.Worksheets.Count; i++)
+                                {
+                                    arrWs[idxSheet] = exportPackage.Workbook.Worksheets[i];
+                                    idxSheet++;
+                                }
+                            }
+                            for (int i = exportPackage.Workbook.Worksheets.Count; i >= 2; i--)
+                            {
+                                exportPackage.Workbook.Worksheets.Delete(exportPackage.Workbook.Worksheets[i]);
+                            }
+                            // add new sheet
+                            exportPackage.Workbook.Worksheets.Add("Sheet2");
+                            // lay file excel sheet 1
+                            var exportWorksheet = exportPackage.Workbook.Worksheets[1];
+                            fnEditTemplate(context, exportWorksheet, customer);
+                            // lay sheet 2
+                            var exportWorksheet1 = exportPackage.Workbook.Worksheets[2];
+                            // do index dau tien gap B_VEL
+                            int idxBVel = 0;
+                            for (int i = 1; i <= ws.Dimension.Rows; i++)
+                            {
+                                if (ws.Cells[i, 1].Value != null && ws.Cells[i, 1].Value.ToString().Contains("[B_"))
+                                {
+                                    idxBVel = i;
+                                    break;
+                                }
+                            }
+                            int headerIdx = idxBVel;
+                            // dò file thấy STT thì dừng
+                            for (int i = 1; i <= ws.Dimension.Rows; i++)
+                            {
+                                if (ws.Cells[i, 1].Value != null && ws.Cells[i, 1].Value.ToString() == "STT")
+                                {
+                                    headerIdx = i;
+                                    break;
+                                }
+                            }
+                            // Data title
+                            int begIdx = 0;
+                            var dow_code = ws.Cells[1, 1, headerIdx, ws.Dimension.Columns].FirstOrDefault(x => x.Value != null && (x.Value.ToString()).Contains("[@Dow_Code]"));//.Contains("[@Dow_Code]")
+                            if (dow_code != null)
+                            {
+                                var r_dow_code = dow_code.Value.ToString();
+                                if (r_dow_code != null)
+                                {
+                                    r_dow_code = r_dow_code.Replace("[@Dow_Code]", Dow_Code);
+                                    r_dow_code = r_dow_code.Replace("[@BegDay]", BegDay);
+                                    r_dow_code = r_dow_code.Replace("[@EndDay]", EndDay);
+                                    exportWorksheet.Cells[dow_code.Address].Value = r_dow_code;
+                                }
+                            }
+                            int sttIdx = 0;
+                            // dò file thấy số 1 thì dừng -> tìm dòng chứa số thứ tự
+                            for (int i = 1; i <= ws.Dimension.Rows; i++)
+                            {
+                                if (ws.Cells[i, 1].Value != null && ws.Cells[i, 1].Value.ToString() == "1")
+                                {
+                                    sttIdx = i;
+                                    break;
+                                }
+                            }
+                            // dò file thấy @STT@ thì dừng
+                            for (int i = 1; i <= ws.Dimension.Rows; i++)
+                            {
+                                if (ws.Cells[i, 1].Value != null && ws.Cells[i, 1].Value.ToString() == "@STT@")
+                                {
+                                    begIdx = i;
+                                    break;
+                                }
+                            }
+
+                            // do index cuoi cung cua content
+                            int idxEnd = begIdx;
+                            string valueBVel = ws.Cells[idxBVel, 1].Value.ToString();
+                            valueBVel = valueBVel.TrimStart('[').TrimEnd(']');
+                            int idoted = valueBVel.IndexOf(".");
+                            string strdoted = valueBVel.Substring(0, idoted + 1);
+                            valueBVel = valueBVel.Replace(strdoted, "");
+                            for (int i = 1; i <= ws.Dimension.Rows; i++)
+                            {
+                                if (ws.Cells[i, 1].Value != null && ws.Cells[i, 1].Value.ToString().Contains(valueBVel))
+                                {
+                                    idxEnd = i;
+                                }
+                            }
+                            // kiem tra xem co xai footer ket thuc hay khong
+                            Boolean[] arrayBool = new Boolean[begIdx - idxBVel];
+                            for (int i = 1; i <= begIdx - idxBVel; i++)
+                            {
+                                if (ws.Cells[begIdx - i, 1].Value != null && ws.Cells[begIdx + i, 1].Value != null &&
+                                    ws.Cells[begIdx - i, 1].Value.ToString().Contains(ws.Cells[begIdx - i, 1].Value.ToString()))
+                                {
+                                    arrayBool[begIdx - idxBVel - i] = true;
+                                }
+                                else
+                                {
+                                    arrayBool[begIdx - idxBVel - i] = false;
+                                }
+                            }
+                            // Kiem tra footer co hidden
+                            Boolean[] arrayHidden = new Boolean[idxEnd - begIdx];
+                            for (int i = 0; i < idxEnd - begIdx; i++)
+                            {
+                                if (ws.Row(idxEnd - i).Hidden)
+                                {
+                                    arrayHidden[i] = true;
+                                }
+                                else
+                                {
+                                    arrayHidden[i] = false;
+                                }
+                            }
+                            // Kiem tra Header co hidden
+                            Boolean[] arrayHeader = new Boolean[begIdx - idxBVel];
+                            for (int i = 0; i < begIdx - idxBVel; i++)
+                            {
+                                if (ws.Row(idxBVel + i).Hidden)
+                                {
+                                    arrayHeader[i] = true;
+                                }
+                                else
+                                {
+                                    arrayHeader[i] = false;
+                                }
+                            }
+                            int colKows = 0;
+                            int tstHeaderIdx = 0;
+                            string strTSTheader = "";
+
+                            if ((PrefixTableName.ToLower() == "TimeSheetTemplate".ToLower()) || (PrefixTableName.ToLower() == "AssignShiftTemplate".ToLower()))
+                            {
+                                // Kiểm tra cột chứa data KowDs
+                                for (int i = 1; i <= ws.Dimension.Columns; i++)
+                                {
+                                    if (ws.Cells[begIdx, i].Value != null && ws.Cells[begIdx, i].Value.ToString().Contains("TST."))
+                                    {
+                                        colKows = i;
+                                        break;
+                                    }
+                                }
+                                // Tìm dòng TST.Header_
+                                for (int i = headerIdx; i < ws.Dimension.Rows; i++)
+                                {
+                                    if (ws.Cells[i, colKows].Value != null && ws.Cells[i, colKows].Value.ToString().Contains("TST.Header"))
+                                    {
+                                        tstHeaderIdx = i;
+                                        break;
+                                    }
+                                }
+                                if (tstHeaderIdx <= 0)
+                                {
+                                    tstHeaderIdx = headerIdx;
+                                }
+                                // lấy width của column
+                                double wKows = exportWorksheet.Column(colKows).Width;
+                                // Lấy string tst header
+                                if (ws.Cells[tstHeaderIdx, colKows].Value != null && colKows > 0)
+                                {
+                                    strTSTheader = ws.Cells[tstHeaderIdx, colKows].Value.ToString();
+                                    strTSTheader = strTSTheader.TrimStart('[').TrimEnd(']');
+                                    strTSTheader = strTSTheader.Replace("TST.Header_", "");
+                                }
+                                // Insert columns thêm 
+                                if (dtDowKs != null)
+                                {
+                                    if (dtDowKs.Columns.Count > 0 && colKows > 0)
+                                    {
+                                        var dowC = Dow_Code.Split('/');
+                                        var dataCol = dtDowKs.Columns;
+                                        var colDF = from DataColumn c in dataCol where (c.ColumnName.Contains(dowC[0])) select c.ColumnName;
+                                        var item = colDF.ToArray().Length;
+                                        var datacolD = colDF.ToArray();
+
+                                        for (int iD = 0; iD < item - 1; iD++)
+                                        {
+                                            exportWorksheet.InsertColumn(colKows + 1 + iD, 1, colKows);
+                                            exportWorksheet.Cells[tstHeaderIdx, colKows + iD]
+                                                        .Copy(exportWorksheet.Cells[tstHeaderIdx, colKows + 1 + iD]);
+                                            exportWorksheet.Column(colKows + 1 + iD).Width = wKows;
+                                            exportWorksheet.Cells[begIdx, colKows + 1 + iD].Value = "";
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.HorizontalAlignment = exportWorksheet.Cells[headerIdx, colKows - 1].Style.HorizontalAlignment;
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.WrapText = exportWorksheet.Cells[headerIdx, colKows - 1].Style.WrapText;
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.VerticalAlignment = exportWorksheet.Cells[headerIdx, colKows - 1].Style.VerticalAlignment;
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.Fill.PatternType = exportWorksheet.Cells[headerIdx, colKows - 1].Style.Fill.PatternType;
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.Font.Bold = exportWorksheet.Cells[headerIdx, colKows - 1].Style.Font.Bold;
+
+                                            //var rgb = exportWorksheet.Cells[headerIdx, colKows - 1, tstHeaderIdx, colKows - 1].Style.Fill.BackgroundColor.Rgb;
+                                            //var rgbText = exportWorksheet.Cells[headerIdx, colKows - 1, tstHeaderIdx, colKows - 1].Style.Font.Color.Rgb;
+                                            //var rgbTheme = exportWorksheet.Cells[headerIdx, colKows - 1, tstHeaderIdx, colKows - 1].Style.Font.Color.Theme;
+                                            ////Convert to system.drawing.color
+                                            //var color = System.Drawing.ColorTranslator.FromHtml("#" + (rgb == "" ? "FFFFFF" : rgb));
+                                            //var colorText = System.Drawing.ColorTranslator.FromHtml("#" + (rgbText == "" ? "FFFFFF" : rgbText));
+                                            ////set color in this cell
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.Fill.BackgroundColor.SetColor(color);
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.Font.Color.SetColor(colorText);
+                                            ////set color in text
+                                            //exportWorksheet.Cells[headerIdx, colKows + 1 + iD, tstHeaderIdx, colKows + 1 + iD].Style.Font
+                                            //    = exportWorksheet.Cells[headerIdx, colKows - 1].Style.Font;
+
+                                            //xet mau cho tung row trong nhung columns moi insert
+                                            for (int iR = 0; iR <= idxEnd - idxBVel; iR++)
+                                            {
+                                                if (idxBVel + iR != begIdx)
+                                                {
+                                                    exportWorksheet.Cells[idxBVel + iR, colKows + iD]
+                                                        .Copy(exportWorksheet.Cells[idxBVel + iR, colKows + 1 + iD]);
+                                                }
+                                                else
+                                                {
+                                                    var strHead = datacolD[iD].Split('_');
+                                                    if (strHead.Length >= 3)
+                                                    {
+                                                        var date = new DateTime(Int32.Parse(strHead[0]), Int32.Parse(strHead[1]), Int32.Parse(strHead[2]));
+                                                        if (date.DayOfWeek.ToString() == "Saturday")
+                                                        {
+                                                            var color = System.Drawing.ColorTranslator.FromHtml("#87cefa");
+                                                            exportWorksheet.Cells[idxBVel + iR, colKows + iD].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                                            exportWorksheet.Cells[idxBVel + iR, colKows + iD].Style.Fill.BackgroundColor.SetColor(color);
+                                                        }
+                                                        else if (date.DayOfWeek.ToString() == "Sunday")
+                                                        {
+                                                            var color = System.Drawing.ColorTranslator.FromHtml("#ffd700");
+                                                            exportWorksheet.Cells[idxBVel + iR, colKows + iD].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                                            exportWorksheet.Cells[idxBVel + iR, colKows + iD].Style.Fill.BackgroundColor.SetColor(color);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        // Xử lý merge dòng idxHeader nếu 
+                                        if (tstHeaderIdx != headerIdx)
+                                        {
+                                            exportWorksheet.Cells[headerIdx, colKows, headerIdx, colKows + item - 1].Merge = true;
+                                        }
+
+                                        using (ExcelRange Rng = exportWorksheet.Cells[headerIdx, colKows, idxEnd, colKows + item])
+                                        {
+                                            Rng.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                                            Rng.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                                            Rng.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                                            Rng.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                                        }
+
+                                        for (int iDK = 2; iDK <= exportWorksheet.Dimension.Columns; iDK++)
+                                        {
+                                            if (exportWorksheet.Cells[sttIdx, iDK - 1].Value != null)
+                                            {
+                                                //exportWorksheet.Cells[sttIdx, iDK].Style.Font.Bold = exportWorksheet.Cells[sttIdx, iDK - 1].Style.Font.Bold;
+                                                //exportWorksheet.Cells[sttIdx, iDK].Style.VerticalAlignment = exportWorksheet.Cells[sttIdx, iDK - 1].Style.VerticalAlignment;
+                                                //exportWorksheet.Cells[sttIdx, iDK].Style.HorizontalAlignment = exportWorksheet.Cells[sttIdx, iDK - 1].Style.HorizontalAlignment;
+                                                exportWorksheet.Cells[sttIdx, iDK - 1]
+                                                        .Copy(exportWorksheet.Cells[sttIdx, iDK]);
+                                                exportWorksheet.Cells[sttIdx, iDK].Value = int.Parse(exportWorksheet.Cells[sttIdx, iDK - 1].Value.ToString()) + 1;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            int idxSp = 0;
+                            Dictionary<int, string> dicSpace = new Dictionary<int, string>();
+                            // Tim khoang trang cua cac dong 
+                            for (int i = idxBVel; i < begIdx; i++)
+                            {
+                                if (ws.Cells[i, 2].Value != null)
+                                {
+                                    dicSpace.Add(idxSp, ws.Cells[i, 2].Value.ToString());
+                                    idxSp++;
+                                }
+                            }
+                            int idxEnd_Beg = 0;
+                            int _idxBVel = idxBVel;
+                            int _idxEnd = idxEnd;
+                            int __idxEnd = begIdx + (begIdx - idxBVel);
+                            int numberRowF = __idxEnd - idxEnd;
+                            int _begIdx = begIdx;
+                            idxEnd_Beg = idxEnd - idxBVel + 1;
+                            int idxRankB_F = idxBVel - begIdx;
+                            int idxRowInsert = 0;
+                            Stack<String> stackStr = new Stack<String>();
+                            Dictionary<int, int> dictionary = new Dictionary<int, int>();
+                            Dictionary<int, int> dictionaryEnd = new Dictionary<int, int>();
+                            // copy data mau de o 1 noi khac
+                            //exportWorksheet.Cells[idxBVel, 1, idxEnd, ws.Dimension.Columns].Copy(exportWorksheet.Cells[1, ws.Dimension.Columns + 1, idxEnd_Beg, 2 * ws.Dimension.Columns]);
+                            // copy data tu sheet 1 sang sheet 2
+                            exportWorksheet.Cells[idxBVel, 1, idxEnd, exportWorksheet.Dimension.Columns].Copy(exportWorksheet1.Cells[1, ws.Dimension.Columns + 1, idxEnd_Beg, 2 * exportWorksheet.Dimension.Columns]);
+                            //exportWorksheet.Cells[idxEnd + 1, 1, ws.Dimension.End.Row, ws.Dimension.Columns].Copy(exportWorksheet1.Cells[idxEnd, 1, ws.Dimension.End.Row, ws.Dimension.Columns]);
+
+                            // Xac dinh xem hinh nao nam o footer
+                            var arrayExceclD = exportWorksheet.Drawings;
+                            dynamic[] obj = new dynamic[arrayExceclD.Count];
+
+                            for (var d = 0; d < arrayExceclD.Count; d++)
+                            {
+                                if (arrayExceclD[d].From.Row > idxEnd)
+                                {
+                                    dynamic _obj = JsonConvert.DeserializeObject("{"
+                                        + "IdxPic:" + d + ","
+                                        + "ColumnT:" + arrayExceclD[d].To.Column + ","
+                                        + "ColumnOffT:" + arrayExceclD[d].To.ColumnOff + ","
+                                        + "RowT:" + arrayExceclD[d].To.Row + ","
+                                        + "RowOffT:" + arrayExceclD[d].To.RowOff + ","
+                                        + "ColumnF:" + arrayExceclD[d].From.Column + ","
+                                        + "ColumnOffF:" + arrayExceclD[d].From.ColumnOff + ","
+                                        + "RowF:" + arrayExceclD[d].From.Row + ","
+                                        + "RowOffF:" + arrayExceclD[d].From.RowOff + ","
+                                        + "IdxB:" + (arrayExceclD[d].From.Row - idxEnd)
+                                        + "}");
+                                    obj[d] = _obj;
+                                }
+                            }
+
+                            int rowIdx = idxBVel;
+                            // bat dau gan data
+                            foreach (DataRow row in tblGroupData.Rows)
+                            {
+                                int GroupLevelID = int.Parse(row["GroupLevelID"].ToString());
+                                if (GroupLevelID < numberRowGroupings) // nếu không là nút lá
+                                {
+                                    var isInDic = dictionary.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                    if (isInDic.Key == 0)
+                                    {
+                                        int i = int.Parse(row["GroupLevelID"].ToString());
+                                        var idxRowParent = dictionary.FirstOrDefault(x => x.Key == (int.Parse(row["GroupLevelID"].ToString()) - 1));
+                                        if (idxRowParent.Key == 0)
+                                        {
+                                            dictionary.Add(i, idxBVel + (GroupLevelID - 1));
+                                            object _columnName = null;
+                                            _columnName = exportWorksheet.Cells[idxBVel + GroupLevelID - 1, 1].Value;
+                                            if (_columnName != null)
+                                            {
+                                                string columnName = _columnName.ToString().TrimStart('[').TrimEnd(']');
+                                                columnName = columnName.Replace("B_", "");
+                                                if (tblGroupData.Columns.Contains(columnName))
+                                                {
+                                                    if (row[columnName].ToString() != null && row[columnName].ToString() != "")
+                                                    {
+                                                        exportWorksheet.Cells[idxBVel + GroupLevelID - 1, 1].Value = row[columnName];
+                                                    }
+                                                    else
+                                                    {
+                                                        exportWorksheet.Cells[idxBVel + GroupLevelID - 1, 1].Value = "";
+                                                    }
+                                                    // Hidden cot header
+                                                    if (arrayHeader[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Row(idxBVel + GroupLevelID - 1).Hidden = true;
+                                                    }
+                                                    if (arrayBool[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), 1].Value = row[columnName];
+                                                        dictionaryEnd.Add(i, idxEnd - (GroupLevelID - 1));
+                                                    }
+                                                    // Hidden cot footer
+                                                    if (arrayHidden[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Row(idxEnd - (GroupLevelID - 1)).Hidden = true;
+                                                    }
+                                                    // Add sum 
+                                                    for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                    {
+                                                        object colSum = exportWorksheet.Cells[idxBVel + GroupLevelID - 1, col].Value;
+                                                        object colSumFooter = exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), col].Value;
+                                                        if (colSum != null)
+                                                        {
+                                                            string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+                                                            if (colSumName != "0.Empty")
+                                                            {
+                                                                if (tblGroupData.Columns.Contains(colSumName))
+                                                                {
+                                                                    exportWorksheet.Cells[idxBVel + GroupLevelID - 1, col].Value = row[colSumName];
+                                                                    exportWorksheet.Cells[idxBVel + GroupLevelID - 1, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                }
+                                                            }
+                                                            else {
+                                                                exportWorksheet.Cells[idxBVel + GroupLevelID - 1, col].Value = 0;
+                                                            }
+                                                        }
+                                                        // footer
+                                                        if (colSumFooter != null)
+                                                        {
+                                                            string colSumName = colSumFooter.ToString().TrimStart('[').TrimEnd(']');
+                                                            if (colSumName != "0.Empty")
+                                                            {
+                                                                if (tblGroupData.Columns.Contains(colSumName))
+                                                                {
+                                                                    exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), col].Value = row[colSumName];
+                                                                    //exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                    //exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), col].Style.Numberformat.Format = "#,##";
+                                                                }
+                                                            }
+                                                            else {
+                                                                exportWorksheet.Cells[idxEnd - (GroupLevelID - 1), col].Value = 0;
+                                                            }
+                                                        }
+                                                    }
+
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            dictionary.Add(i, idxRowParent.Value + 1);
+                                            int _sodongcaninsertthem = (idxEnd_Beg - GroupLevelID + 1) - GroupLevelID + 1;
+
+                                            object _columnName = null;
+                                            _columnName = exportWorksheet.Cells[idxRowParent.Value + 1, 1].Value;
+                                            if (_columnName != null)
+                                            {
+                                                string columnName = _columnName.ToString().TrimStart('[').TrimEnd(']');
+                                                columnName = columnName.Replace("B_", "");
+                                                string sp = "";
+                                                if (dicSpace.Count > 0)
+                                                {
+                                                    sp = dicSpace.FirstOrDefault(x => x.Key == int.Parse((GroupLevelID - 1).ToString())).Value.ToString();
+                                                    sp = sp.Replace("[", "");
+                                                    sp = sp.Replace("]", "");
+                                                    sp = sp.Replace("B_", "");
+                                                }
+                                                else
+                                                {
+                                                    sp = columnName;
+                                                }
+                                                if (tblGroupData.Columns.Contains(columnName))
+                                                {
+                                                    if (row[columnName].ToString() != null && row[columnName].ToString() != "")
+                                                    {
+                                                        exportWorksheet.Cells[idxRowParent.Value + 1, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                    }
+                                                    else
+                                                    {
+                                                        exportWorksheet.Cells[idxRowParent.Value + 1, 1].Value = "";
+                                                    }
+                                                    // Hidden cot header
+                                                    if (arrayHeader[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Row(idxRowParent.Value + 1).Hidden = true;
+                                                    }
+                                                    if (arrayBool[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                        dictionaryEnd.Add(i, idxRowParent.Value + _sodongcaninsertthem);
+                                                    }
+                                                    // Hidden cot footer
+                                                    if (arrayHidden[GroupLevelID - 1])
+                                                    {
+                                                        exportWorksheet.Row(idxRowParent.Value + _sodongcaninsertthem).Hidden = true;
+                                                    }
+                                                    // Add sum 
+                                                    for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                    {
+                                                        object colSum = exportWorksheet.Cells[idxRowParent.Value + 1, col].Value;
+                                                        object colSumFooter = exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, col].Value;
+                                                        if (colSum != null)
+                                                        {
+                                                            string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+                                                            if (colSumName != "0.Empty")
+                                                            {
+                                                                if (tblGroupData.Columns.Contains(colSumName))
+                                                                {
+                                                                    exportWorksheet.Cells[idxRowParent.Value + 1, col].Value = row[colSumName];
+                                                                    exportWorksheet.Cells[idxRowParent.Value + 1, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                }
+                                                            }
+                                                            else {
+                                                                exportWorksheet.Cells[idxRowParent.Value + 1, col].Value = 0;
+                                                            }
+                                                        }
+                                                        // footer
+                                                        if (colSumFooter != null)
+                                                        {
+                                                            string colSumName = colSumFooter.ToString().TrimStart('[').TrimEnd(']');
+                                                            if (colSumName != "0.Empty")
+                                                            {
+                                                                if (tblGroupData.Columns.Contains(colSumName))
+                                                                {
+                                                                    exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, col].Value = row[colSumName];
+                                                                    //exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                    //exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, col].Style.Numberformat.Format = "#,##";
+                                                                }
+                                                            }
+                                                            else {
+                                                                exportWorksheet.Cells[idxRowParent.Value + _sodongcaninsertthem, col].Value = 0;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+
+                                    }
+                                    else
+                                    {
+                                        // lấy giá trị dòng cuối cùng của GroupLevelID
+                                        var idxRowEnd = dictionaryEnd.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                        // xóa những item có key > GroupLevelID
+                                        foreach (var item in dictionary.Where(kvp => kvp.Key > GroupLevelID).ToList())
+                                        {
+                                            dictionary.Remove(item.Key);
+                                        }
+                                        foreach (var item in dictionaryEnd.Where(kvp => kvp.Key > GroupLevelID).ToList())
+                                        {
+                                            dictionaryEnd.Remove(item.Key);
+                                        }
+                                        //
+                                        int _sodongcaninsertthem = (idxEnd_Beg - GroupLevelID + 1) - GroupLevelID + 1;
+                                        for (int insert = 0; insert < _sodongcaninsertthem; insert++)
+                                        {
+                                            exportWorksheet.InsertRow(idxRowEnd.Value + 1 + insert, 1);
+                                        }
+                                        // copy data
+                                        exportWorksheet1.Cells[GroupLevelID, ws.Dimension.Columns + 1, idxEnd_Beg - GroupLevelID + 1, 2 * exportWorksheet.Dimension.Columns - 1]
+                                        .Copy(exportWorksheet.Cells[idxRowEnd.Value + 1, 1, idxRowEnd.Value + _sodongcaninsertthem, exportWorksheet.Dimension.Columns]);
+                                        // Tang index ket thuc cua dictionary
+                                        foreach (var item in dictionaryEnd.ToList())
+                                        {
+                                            int value = item.Value;
+                                            int key = item.Key;
+                                            dictionaryEnd.Remove(item.Key);
+                                            dictionaryEnd.Add(key, value + _sodongcaninsertthem);
+                                        }
+                                        int _value = isInDic.Value;
+                                        int _key = isInDic.Key;
+                                        dictionary.Remove(_key);
+                                        dictionary.Add(_key, idxRowEnd.Value + 1);
+                                        // gang data Vel.Column la tiep theo
+                                        object _columnName = null;
+                                        var _rowStarNode = dictionary.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                        _columnName = exportWorksheet.Cells[_rowStarNode.Value, 1].Value;
+                                        if (_columnName != null)
+                                        {
+                                            string columnName = _columnName.ToString().TrimStart('[').TrimEnd(']');
+                                            columnName = columnName.Replace("B_", "");
+                                            string sp = "";
+                                            if (dicSpace.Count > 0)
+                                            {
+                                                sp = dicSpace.FirstOrDefault(x => x.Key == int.Parse((GroupLevelID - 1).ToString())).Value.ToString();
+                                                sp = sp.Replace("[", "");
+                                                sp = sp.Replace("]", "");
+                                                sp = sp.Replace("B_", "");
+                                            }
+                                            else
+                                            {
+                                                sp = columnName;
+                                            }
+                                            if (tblGroupData.Columns.Contains(columnName))
+                                            {
+                                                var _rowEndNode = dictionaryEnd.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+
+                                                if (row[columnName].ToString() != null && row[columnName].ToString() != "")
+                                                {
+                                                    exportWorksheet.Cells[_rowStarNode.Value, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                }
+                                                else
+                                                {
+                                                    exportWorksheet.Cells[_rowStarNode.Value, 1].Value = "";
+                                                }
+                                                // Hidden cot header
+                                                if (arrayHeader[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Row(_rowStarNode.Value).Hidden = true;
+                                                }
+                                                if (arrayBool[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Cells[_rowEndNode.Value, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                }
+                                                // Hidden cot footer
+                                                if (arrayHidden[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Row(_rowEndNode.Value).Hidden = true;
+                                                }
+                                                // Add sum
+                                                for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                {
+                                                    object colSum = exportWorksheet.Cells[_rowStarNode.Value, col].Value;
+                                                    object colSumFooter = exportWorksheet.Cells[_rowEndNode.Value, col].Value;
+                                                    if (colSum != null)
+                                                    {
+                                                        string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+
+                                                        if (colSumName != "0.Empty")
+                                                        {
+                                                            if (tblGroupData.Columns.Contains(colSumName))
+                                                            {
+                                                                exportWorksheet.Cells[_rowStarNode.Value, col].Value = row[colSumName];
+                                                                exportWorksheet.Cells[_rowStarNode.Value, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                            }
+                                                        }
+                                                        else {
+                                                            exportWorksheet.Cells[_rowStarNode.Value, col].Value = 0;
+                                                        }
+                                                    }
+                                                    // footer
+                                                    if (colSumFooter != null)
+                                                    {
+                                                        string colSumName = colSumFooter.ToString().TrimStart('[').TrimEnd(']');
+
+                                                        if (colSumName != "0.Empty")
+                                                        {
+                                                            if (tblGroupData.Columns.Contains(colSumName))
+                                                            {
+                                                                exportWorksheet.Cells[_rowEndNode.Value, col].Value = row[colSumName];
+                                                                //exportWorksheet.Cells[_rowEndNode.Value, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                //exportWorksheet.Cells[_rowEndNode.Value, col].Style.Numberformat.Format = "#,##";
+                                                            }
+                                                        }
+                                                        else {
+                                                            exportWorksheet.Cells[_rowEndNode.Value, col].Value = 0;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                { // là node lá
+                                    var isInDic = dictionary.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                    //
+                                    if (isInDic.Key == 0)
+                                    {
+                                        var idxDongThu2 = dictionary.FirstOrDefault(x => x.Key == (int.Parse(row["GroupLevelID"].ToString()) - 1));
+                                        int valueidxDongThu2 = idxDongThu2.Value;
+                                        int i = int.Parse(row["GroupLevelID"].ToString());
+                                        if (idxDongThu2.Value + 1 >= idxBVel)
+                                        {
+                                            dictionary.Add(i, idxDongThu2.Value + 1);
+                                        }
+                                        else
+                                        {
+                                            valueidxDongThu2 = idxBVel - 1;
+                                            dictionary.Add(i, idxBVel);
+                                        }
+
+                                        object _columnName = null;
+                                        _columnName = exportWorksheet.Cells[valueidxDongThu2 + 1, 1].Value;
+                                        if (_columnName != null)
+                                        {
+                                            string columnName = _columnName.ToString().TrimStart('[').TrimEnd(']');
+                                            columnName = columnName.Replace("B_", "");
+                                            string sp = "";
+                                            if (dicSpace.Count > 0)
+                                            {
+                                                sp = dicSpace.FirstOrDefault(x => x.Key == int.Parse((GroupLevelID - 1).ToString())).Value.ToString();
+                                                sp = sp.Replace("[", "");
+                                                sp = sp.Replace("]", "");
+                                                sp = sp.Replace("B_", "");
+                                            }
+                                            else
+                                            {
+                                                sp = columnName;
+                                            }
+
+                                            if (tblGroupData.Columns.Contains(columnName))
+                                            {
+                                                if (row[columnName].ToString() != null && row[columnName].ToString() != "")
+                                                {
+                                                    exportWorksheet.Cells[valueidxDongThu2 + 1, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                }
+                                                else
+                                                {
+                                                    exportWorksheet.Cells[valueidxDongThu2 + 1, 1].Value = "";
+                                                }
+
+                                                // Hidden cot header
+                                                if (arrayHeader[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Row(valueidxDongThu2 + 1).Hidden = true;
+                                                }
+
+                                                // insert data vao dong @STT@
+
+                                                int idxLoop = 1;
+                                                var GroupIdx = row["GroupIdx"].ToString();
+                                                var fields = tblDetail.Select(String.Format("GroupIdx = '{0}'", GroupIdx), strSort);
+
+                                                if (fields.Count() > 0)
+                                                {
+                                                    for (int f = 0; f < fields.Count(); f++)
+                                                    {
+                                                        for (int j = 1; j <= exportWorksheet.Dimension.Columns; j++)
+                                                        {
+                                                            object _colName = exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, j].Value;
+                                                            if (_colName != null)
+                                                            {
+                                                                string colName = _colName.ToString().TrimStart('[').TrimEnd(']');
+                                                                if (colName == "@STT.Auto@")
+                                                                {
+                                                                    exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, 1].Value = idxSTT; //idxLoop;
+                                                                    if (dicSpace.Count > 0)
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, 2].Value = idxSTT; //idxLoop;
+                                                                    idxSTT++;
+                                                                }
+                                                                else if (colName == "0.Empty")
+                                                                {
+                                                                    exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, j].Value = "";
+                                                                }
+                                                                else if (colName == "@STT@")
+                                                                {
+                                                                    exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, 1].Value = idxLoop;
+                                                                    if (dicSpace.Count > 0)
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, 2].Value = idxLoop;
+                                                                }
+                                                                else if (tblDetail.Columns.Contains(colName))
+                                                                {
+                                                                    if (fields[f][colName].ToString() != null && fields[f][colName].ToString() != "")
+                                                                    {
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, j].Value = fields[f][colName];
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, j].Value = "";
+                                                                    }
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, j].Value = "";
+                                                            }
+                                                            // Add sum 
+                                                            for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                            {
+                                                                object colSum = exportWorksheet.Cells[valueidxDongThu2 + idxLoop, col].Value;
+                                                                if (colSum != null)
+                                                                {
+                                                                    string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+                                                                    if (colSumName != "0.Empty")
+                                                                    {
+                                                                        if (tblGroupData.Columns.Contains(colSumName))
+                                                                        {
+                                                                            exportWorksheet.Cells[valueidxDongThu2 + idxLoop, col].Value = row[colSumName];
+                                                                            exportWorksheet.Cells[valueidxDongThu2 + idxLoop, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                        }
+                                                                    }
+                                                                    else {
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + idxLoop, col].Value = 0;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // Thêm loại công ca nếu template = 'TimeSheetTemplate'
+                                                        if (((PrefixTableName.ToLower() == "TimeSheetTemplate".ToLower()) || (PrefixTableName.ToLower() == "AssignShiftTemplate".ToLower())) && colKows > 0)
+                                                        {
+                                                            if (dtDowKs != null)
+                                                            {
+                                                                var empCode = fields[f]["CV.EmployeeCode"];
+                                                                var fieldDow = dtDowKs.Select(String.Format("EmployeeCode = '{0}'", fields[f]["CV.EmployeeCode"]));
+                                                                //var dataFieldD = from DataRow r in fieldDow select r;
+                                                                if (fieldDow.Count() > 0)
+                                                                {
+                                                                    var item = fieldDow[0].ItemArray;
+                                                                    var dataCol = fieldDow[0].Table.Columns;
+                                                                    var dowC = Dow_Code.Split('/');
+                                                                    var colD = from DataColumn c in dataCol where (c.ColumnName.Contains(dowC[0])) select c.ColumnName;
+                                                                    var datacolD = colD.ToArray();
+
+                                                                    for (int iD = 0; iD < datacolD.Length; iD++)
+                                                                    {
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows + iD].Value = item[iD + (item.Length - datacolD.Length)]; // gắn content
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows + iD].Style.Font.Bold = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.Font.Bold;
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows + iD].Style.VerticalAlignment = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.VerticalAlignment;
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows + iD].Style.HorizontalAlignment = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.HorizontalAlignment;
+                                                                        string _strTSTheader = strTSTheader;
+                                                                        if (strTSTheader != "")
+                                                                        {
+                                                                            var dataD = datacolD[iD].Split('_');
+                                                                            if (strTSTheader.Contains('/') || strTSTheader.Contains('-') || strTSTheader.Contains('_'))
+                                                                            {
+                                                                                _strTSTheader = _strTSTheader.Replace("dd", dataD[2]);
+                                                                                _strTSTheader = _strTSTheader.Replace("MM", dataD[1]);
+                                                                                _strTSTheader = _strTSTheader.Replace("yyyy", dataD[0]);
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                _strTSTheader = _strTSTheader.Replace("dd", dataD[2] + "-");
+                                                                                _strTSTheader = _strTSTheader.Replace("MM", dataD[1] + "-");
+                                                                                _strTSTheader = _strTSTheader.Replace("yyyy", dataD[0] + "-");
+                                                                                _strTSTheader = _strTSTheader.TrimEnd('-');
+                                                                            }
+                                                                            exportWorksheet.Cells[tstHeaderIdx, colKows + iD].Value = _strTSTheader; // gắn header
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            exportWorksheet.Cells[tstHeaderIdx, colKows + iD].Value = datacolD[iD];
+                                                                        }
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    var dataCol = dtDowKs.Columns;
+                                                                    var dowC = Dow_Code.Split('/');
+                                                                    var colD = from DataColumn c in dataCol where (c.ColumnName.Contains(dowC[0])) select c.ColumnName;
+                                                                    var datacolD = colD.ToArray();
+                                                                    for (int iD = 0; iD < datacolD.Length; iD++)
+                                                                    {
+                                                                        if (strTSTheader != "")
+                                                                        {
+                                                                            var dataD = datacolD[iD].Split('_');
+                                                                            string _strTSTheader = strTSTheader;
+                                                                            if (strTSTheader.Contains('/') || strTSTheader.Contains('-') || strTSTheader.Contains('_'))
+                                                                            {
+                                                                                _strTSTheader = _strTSTheader.Replace("dd", dataD[2]);
+                                                                                _strTSTheader = _strTSTheader.Replace("MM", dataD[1]);
+                                                                                _strTSTheader = _strTSTheader.Replace("yyyy", dataD[0]);
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                _strTSTheader = _strTSTheader.Replace("dd", dataD[2] + "-");
+                                                                                _strTSTheader = _strTSTheader.Replace("MM", dataD[1] + "-");
+                                                                                _strTSTheader = _strTSTheader.Replace("yyyy", dataD[0] + "-");
+                                                                                _strTSTheader = _strTSTheader.TrimEnd('-');
+                                                                            }
+                                                                            exportWorksheet.Cells[tstHeaderIdx, colKows + iD].Value = _strTSTheader;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            exportWorksheet.Cells[tstHeaderIdx, colKows + iD].Value = datacolD[iD];
+                                                                        }
+                                                                    }
+                                                                    exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows].Value = "";
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop, colKows].Value = "No data";
+                                                                exportWorksheet.Cells[tstHeaderIdx, colKows].Value = "";
+                                                            }
+                                                        }
+                                                        //
+                                                        if (idxLoop == 1)
+                                                        {
+                                                            if (arrayBool[GroupLevelID - 1])
+                                                            {
+                                                                exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                            }
+
+                                                            dictionaryEnd.Add(i, valueidxDongThu2 + 1 + 2);
+                                                            // Add sum 
+                                                            for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                            {
+                                                                object colSum = exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, col].Value;
+                                                                if (colSum != null)
+                                                                {
+                                                                    string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+                                                                    if (colSumName != "0.Empty")
+                                                                    {
+                                                                        if (tblGroupData.Columns.Contains(colSumName))
+                                                                        {
+                                                                            exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, col].Value = row[colSumName];
+                                                                            //exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                            //exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, col].Style.Numberformat.Format = "#,##";
+                                                                        }
+                                                                    }
+                                                                    else {
+                                                                        exportWorksheet.Cells[valueidxDongThu2 + 1 + 2, col].Value = 0;
+                                                                    }
+                                                                }
+                                                            }
+                                                            // Hidden cot footer
+                                                            if (arrayHidden[GroupLevelID - 1])
+                                                            {
+                                                                exportWorksheet.Row(valueidxDongThu2 + 1 + 2).Hidden = true;
+                                                            }
+                                                        }
+                                                        // insert vao 1 dong moi
+                                                        if (idxLoop != fields.Count())
+                                                        {
+                                                            exportWorksheet.InsertRow(valueidxDongThu2 + 1 + idxLoop + 1, 1, valueidxDongThu2 + 1 + idxLoop);
+                                                            // Copy data
+                                                            exportWorksheet1.Cells[GroupLevelID + 1, ws.Dimension.Columns + 1, GroupLevelID + 1, 2 * exportWorksheet.Dimension.Columns - 1]
+                                                            .Copy(exportWorksheet.Cells[valueidxDongThu2 + 1 + idxLoop + 1, 1, valueidxDongThu2 + 1 + idxLoop + 1, exportWorksheet.Dimension.Columns]);
+                                                            //
+                                                            // Tang index ket thuc cua dictionaryEnd
+                                                            foreach (var item in dictionaryEnd.ToList())
+                                                            {
+                                                                int value = item.Value;
+                                                                int key = item.Key;
+                                                                dictionaryEnd.Remove(item.Key);
+                                                                dictionaryEnd.Add(key, value + 1);
+                                                            }
+                                                        }
+                                                        idxLoop++;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // lay dong ket thuc cua dong la
+                                        isInDic = dictionary.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                        var rowEndNode = dictionaryEnd.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                        for (int insert = 0; insert < 3; insert++)
+                                        {
+                                            exportWorksheet.InsertRow(rowEndNode.Value + 1 + insert, 1);
+                                            idxRowInsert++;
+                                        }
+
+                                        // copy du lieu file excel mau xuong duoi
+                                        exportWorksheet1.Cells[GroupLevelID, ws.Dimension.Columns + 1, idxEnd_Beg - GroupLevelID + 1, 2 * exportWorksheet.Dimension.Columns - 1]
+                                        .Copy(exportWorksheet.Cells[rowEndNode.Value + 1, 1, rowEndNode.Value + idxRowInsert, exportWorksheet.Dimension.Columns]);
+
+                                        // insert data vào @Stt@ và  idxRowInsert + thêm số data insert vào
+                                        int idxLoop = 1;
+                                        var GroupIdx = row["GroupIdx"].ToString();
+                                        var fields = tblDetail.Select(String.Format("GroupIdx = '{0}'", GroupIdx), strSort);
+                                        var idxDongThu2 = dictionaryEnd.FirstOrDefault(x => x.Key == (int.Parse(row["GroupLevelID"].ToString())));
+                                        if (fields.Count() > 0)
+                                        {
+                                            for (int f = 0; f < fields.Count(); f++)
+                                            {
+                                                for (int j = 1; j <= exportWorksheet.Dimension.Columns; j++)
+                                                {
+                                                    object _colName = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, j].Value;
+                                                    if (_colName != null)
+                                                    {
+                                                        string colName = _colName.ToString().TrimStart('[').TrimEnd(']');
+                                                        if (colName == "@STT.Auto@")
+                                                        {
+                                                            exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, 1].Value = idxSTT; //idxLoop;
+                                                            if (dicSpace.Count > 0)
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, 2].Value = idxSTT; //idxLoop;
+                                                            idxSTT++;
+                                                        }
+                                                        else if (colName == "0.Empty")
+                                                        {
+                                                            exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, j].Value = "";
+                                                        }
+                                                        else if (colName == "@STT@")
+                                                        {
+                                                            exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, 1].Value = idxLoop;
+                                                            if (dicSpace.Count > 0)
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, 2].Value = idxLoop;
+                                                        }
+                                                        else if (tblDetail.Columns.Contains(colName))
+                                                        {
+                                                            if (fields[f][colName].ToString() != null && fields[f][colName].ToString() != "")
+                                                            {
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, j].Value = fields[f][colName];
+                                                            }
+                                                            else
+                                                            {
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, j].Value = "";
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, j].Value = "";
+                                                    }
+                                                }
+
+                                                // Thêm loại công ca nếu template = 'TimeSheetTemplate'
+                                                if (((PrefixTableName.ToLower() == "TimeSheetTemplate".ToLower()) || (PrefixTableName.ToLower() == "AssignShiftTemplate".ToLower())) && colKows > 0)
+                                                {
+                                                    if (dtDowKs != null)
+                                                    {
+                                                        var empCode = fields[f]["CV.EmployeeCode"];
+                                                        var fieldDow = dtDowKs.Select(String.Format("EmployeeCode = '{0}'", fields[f]["CV.EmployeeCode"]));
+                                                        if (fieldDow.Count() > 0)
+                                                        {
+                                                            var item = fieldDow[0].ItemArray;
+                                                            for (int iD = 2; iD < item.Count(); iD++)
+                                                            {
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows + iD - 2].Value = item[iD];
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows + iD - 2].Style.Font.Bold = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.Font.Bold;
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows + iD - 2].Style.VerticalAlignment = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.VerticalAlignment;
+                                                                exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows + iD - 2].Style.HorizontalAlignment = exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Style.HorizontalAlignment;
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Value = "";
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop, colKows].Value = "No data";
+                                                        exportWorksheet.Cells[tstHeaderIdx, colKows].Value = "";
+                                                    }
+                                                }
+
+                                                //
+                                                if (idxLoop != fields.Count())
+                                                {
+                                                    exportWorksheet.InsertRow(idxDongThu2.Value + 1 + idxLoop + 1, 1, idxDongThu2.Value + 1 + idxLoop);
+                                                    // Copy data
+                                                    exportWorksheet1.Cells[GroupLevelID + 1, ws.Dimension.Columns + 1, GroupLevelID + 1, 2 * exportWorksheet.Dimension.Columns - 1]
+                                                    .Copy(exportWorksheet.Cells[idxDongThu2.Value + 1 + idxLoop + 1, 1, idxDongThu2.Value + 1 + idxLoop + 1, exportWorksheet.Dimension.Columns]);
+                                                    //
+                                                }
+
+                                                idxLoop++;
+                                            }
+                                        }
+                                        idxRowInsert += idxLoop - 2;
+                                        // Tang index ket thuc cua dictionaryEnd
+                                        foreach (var item in dictionaryEnd.ToList())
+                                        {
+                                            int value = item.Value;
+                                            int key = item.Key;
+                                            dictionaryEnd.Remove(item.Key);
+                                            dictionaryEnd.Add(key, value + idxRowInsert);
+                                        }
+                                        // đổi index bắt đầu của dictionary
+                                        int _value = rowEndNode.Value + 1;
+                                        int _key = rowEndNode.Key;
+                                        dictionary.Remove(_key);
+                                        dictionary.Add(_key, _value);
+                                        //
+                                        // gang data Vel.Column la tiep theo
+                                        object _columnName = null;
+                                        var _rowStarNode = dictionary.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+                                        //_columnName = exportWorksheet.Cells[idxEnd + idxRowInsert + numberRowF - _iii + 1, 1].Value;
+                                        _columnName = exportWorksheet.Cells[_rowStarNode.Value, 1].Value;
+                                        if (_columnName != null)
+                                        {
+                                            string columnName = _columnName.ToString().TrimStart('[').TrimEnd(']');
+                                            columnName = columnName.Replace("B_", "");
+                                            string sp = "";
+                                            if (dicSpace.Count > 0)
+                                            {
+                                                sp = dicSpace.FirstOrDefault(x => x.Key == int.Parse((GroupLevelID - 1).ToString())).Value.ToString();
+                                                sp = sp.Replace("[", "");
+                                                sp = sp.Replace("]", "");
+                                                sp = sp.Replace("B_", "");
+                                            }
+                                            else
+                                            {
+                                                sp = columnName;
+                                            }
+
+                                            // Hidden cot header
+                                            if (arrayHeader[GroupLevelID - 1])
+                                            {
+                                                exportWorksheet.Row(_rowStarNode.Value).Hidden = true;
+                                            }
+
+                                            if (tblGroupData.Columns.Contains(columnName))
+                                            {
+                                                var _rowEndNode = dictionaryEnd.FirstOrDefault(x => x.Key == int.Parse(row["GroupLevelID"].ToString()));
+
+                                                if (row[columnName].ToString() != null && row[columnName].ToString() != "")
+                                                {
+                                                    exportWorksheet.Cells[_rowStarNode.Value, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                }
+                                                else
+                                                {
+                                                    exportWorksheet.Cells[_rowStarNode.Value, 1].Value = "";
+                                                }
+
+                                                if (arrayBool[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Cells[_rowEndNode.Value, 1].Value = sp.Replace(columnName, row[columnName].ToString());
+                                                }
+                                                // Add sum 
+                                                for (int col = 1; col < exportWorksheet.Dimension.Columns; col++)
+                                                {
+                                                    object colSum = exportWorksheet.Cells[_rowStarNode.Value, col].Value;
+                                                    object colSumFooter = exportWorksheet.Cells[_rowEndNode.Value, col].Value;
+                                                    if (colSum != null)
+                                                    {
+                                                        string colSumName = colSum.ToString().TrimStart('[').TrimEnd(']');
+
+                                                        if (colSumName != "0.Empty")
+                                                        {
+                                                            if (tblGroupData.Columns.Contains(colSumName))
+                                                            {
+                                                                exportWorksheet.Cells[_rowStarNode.Value, col].Value = row[colSumName];
+                                                                exportWorksheet.Cells[_rowStarNode.Value, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                            }
+                                                        }
+                                                        else {
+                                                            exportWorksheet.Cells[_rowStarNode.Value, col].Value = 0;
+                                                        }
+                                                    }
+                                                    // footer
+                                                    if (colSumFooter != null)
+                                                    {
+                                                        string colSumName = colSumFooter.ToString().TrimStart('[').TrimEnd(']');
+                                                        if (colSumName != "0.Empty")
+                                                        {
+                                                            if (tblGroupData.Columns.Contains(colSumName))
+                                                            {
+                                                                exportWorksheet.Cells[_rowEndNode.Value, col].Value = row[colSumName];
+                                                                //exportWorksheet.Cells[_rowEndNode.Value, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                                                                //exportWorksheet.Cells[_rowEndNode.Value, col].Style.Numberformat.Format = "#,##";
+                                                            }
+                                                        }
+                                                        else {
+                                                            exportWorksheet.Cells[_rowEndNode.Value, col].Value = 0;
+                                                        }
+                                                    }
+                                                }
+                                                // Hidden cot footer
+                                                if (arrayHidden[GroupLevelID - 1])
+                                                {
+                                                    exportWorksheet.Row(_rowEndNode.Value).Hidden = true;
+                                                }
+                                            }
+                                        }
+                                        //
+                                        idxRowInsert = 0;
+                                    }
+                                }
+                                rowIdx++;
+                            }
+                            // Di chuyen anh 
+                            var _idxRowEnd = (dictionaryEnd.FirstOrDefault(x => x.Key == 1).Value.ToString() != null) ? dictionaryEnd.FirstOrDefault(x => x.Key == 1).Value : idxEnd;
+                            for (var o = 0; o < obj.Count(); o++)
+                            {
+                                if (obj[o] != null)
+                                {
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())]
+                                        .SetPosition(_idxRowEnd + int.Parse(obj[o].IdxB.ToString()), 0, int.Parse(obj[o].ColumnF.ToString()), 0);
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].To.Column = int.Parse(obj[o].ColumnT.ToString());
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].To.ColumnOff = int.Parse(obj[o].ColumnOffT.ToString());
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].To.RowOff = int.Parse(obj[o].RowOffT.ToString());
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].From.ColumnOff = int.Parse(obj[o].ColumnOffF.ToString());
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].From.RowOff = int.Parse(obj[o].RowOffF.ToString());
+                                    int x = int.Parse(obj[o].RowT.ToString()) - int.Parse(obj[o].RowF.ToString());
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].To.Row =
+                                    exportWorksheet.Drawings[int.Parse(obj[o].IdxPic.ToString())].From.Row + x;
+                                }
+                            }
+                            //int xxxx = exportWorksheet.Drawings[0].From.Column;
+                            //exportWorksheet.Drawings[1].SetPosition(40, 0, exportWorksheet.Drawings[1].From.Column, 0);
+                            // Add lại các sheet ban đầu
+                            for (var i = 0; i < arrWs.Length; i++)
+                            {
+                                exportPackage.Workbook.Worksheets.Add(arrWs[i].Name, arrWs[i]);
+                            }
+
+                            var ms = new System.IO.MemoryStream();
+                            exportPackage.SaveAs(ms);
+                            ms.WriteTo(context.Response.OutputStream);
+                        }
+                    }
+                    else
+                    {
+                        context.Response.ContentType = "text/plain";
+                        context.Response.Write("Excel template not found!");
+                    }
+                    context.Response.Flush();
+                    context.Response.End();
+                }
+            }
+        }
+    }
+}
