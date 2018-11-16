@@ -1,0 +1,170 @@
+db.getCollection("lv.HCSLS_Employees").aggregate([
+    {'$lookup': {'foreignField': 'username', 'as': 'uc', 'from': 'lv.auth_user_info', 'localField': 'created_by'}}, 
+    {'$lookup': {'foreignField': 'username', 'as': 'um', 'from': 'lv.auth_user_info', 'localField': 'modified_by'}}, 
+    {
+        '$project': {
+            'Last_Name': 1, 
+            'EmployeeType': 1, 
+            'CourseID': 1, 
+            'JobWCode': 1, 
+            'created_on': 1, 
+            'modified_on': 1,
+            'modified_by': {'$ifNull': ['$um.login_account', '']}, 
+            'ID': 1, 
+            'ClassID': 1, 
+            'StartDate': 1, 
+            'First_Name': 1, 
+            'EndDate': 1,
+            'created_by': 
+            '$uc.login_account', 
+            'Email': 1, 
+        }
+    }, {
+        '$lookup': {
+           'from': "lv.LMSSV_SurveyResultDetail",
+           'let': { 'classId': "$ClassID",'id': "$ID" },
+           'pipeline': [
+              { '$match':
+                 { '$expr':
+                    { '$and':
+                       [
+                         { '$eq': [ "$EmployeeID",  "$$id" ] },
+                         { '$eq': [ "$ClassID", "$$classId" ] }
+                       ]
+                    }
+                 }
+              },
+              { 
+                '$project': 
+                    { 
+                        "QuestionID" : 1,
+                        "QuestionText" : 1,
+                        "ResponseIP" : 1,
+                        "ResponseDuration" : 1,
+                        "ResponseStart" : 1,
+                        "ResponseStatus" : 1,
+                        "SurveyID": 1
+                   } 
+              }
+           ],
+           'as': "item"
+        }
+    }, {
+        "$unwind": {
+            "path": "$item",
+            "preserveNullAndEmptyArrays": true
+        }
+    },
+    {
+        '$project': {
+            'Last_Name': 1, 
+            'EmployeeType': 1, 
+            'CourseID': 1, 
+            'JobWCode': 1, 
+            'created_on': 1, 
+            'modified_on': 1,
+            'modified_by': 1, 
+            'ID': 1, 
+            'ClassID': 1, 
+            'StartDate': 1, 
+            'First_Name': 1, 
+            'EndDate': 1,
+            'created_by': 1, 
+            'Email': 1, 
+            'DepartmentCode': 1,
+            'ResponseIP': "$item.ResponseIP",
+            'ResponseDuration': "$item.ResponseDuration",
+            'ResponseStart': "$item.ResponseStart",
+            'ResponseStatus': "$item.ResponseStatus",
+            'SurveyID': "$item.SurveyID",
+        }
+    }, {
+        "$lookup": {
+            'from': "lv.LMSSV_QuestionAnswerSurvey",
+            'let': { 'classId': "$ClassID",'id': "$ID", 'surveyID': "$SurveyID" },
+            'pipeline': [
+              { '$match':
+                 { '$expr':
+                    { '$and':
+                       [
+                         { '$eq': [ "$EmployeeID",  "$$id" ] },
+                         { '$eq': [ "$ClassID", "$$classId" ] },
+                         { '$eq': [ "$SurveyID", "$$surveyID" ] }
+                       ]
+                    }
+                 }
+              },
+              { 
+                '$project': 
+                    { 
+                        QuestionList: 1,
+                        QuestionCategoryList: 1
+                   } 
+              }
+           ],
+           'as': "quest"
+        }
+    }, {
+        "$unwind": {
+            "path": "$quest",
+            "preserveNullAndEmptyArrays": true
+        }
+    }, {
+        "$project": {
+            'Last_Name': 1, 
+            'EmployeeType': 1,
+            'FullName': {
+                "$concat": ["$Last_Name", " ", "$First_Name"]
+            },
+            'CourseID': 1, 
+            'JobWCode': 1, 
+            'created_on': 1, 
+            'modified_on': 1,
+            'modified_by': 1, 
+            'ID': 1, 
+            'ClassID': 1, 
+            'StartDate': 1, 
+            'First_Name': 1, 
+            'EndDate': 1,
+            'created_by': 1, 
+            'Email': 1, 
+            'DepartmentCode': 1,
+            'ResponseIP': 1,
+            'ResponseDuration': 1,
+            'ResponseStart': 1,
+            'ResponseStatus': 1,
+            'SurveyID': 1,
+            'QuestionList': '$quest.QuestionList'
+            'QuestionCategoryList': '$quest.QuestionCategoryList'
+        }
+    }, {
+        '$lookup': {
+           'from': 'lv.LMSSV_Question',
+           'localField': 'QuestionList.QuestionID',
+           'foreignField': 'QuestionID',
+           'as': 'questions'
+        }
+    },{ "$sort":
+        {
+            "FullName": 1
+        } 
+    },
+        {
+        "$facet": {
+            "metadata": [{ "$count": "total" }, { "$addFields": { "page_index": 0, "page_size": 100 } }],
+            "data": [{ "$skip": 100 * 0 }, { "$limit": 100 }]
+        }
+    },
+    { 
+        "$unwind": { "path": '$metadata', "preserveNullAndEmptyArrays": false } 
+    },
+    {
+        "$project": {
+            'page_size': '$metadata.page_size',
+            'page_index': '$metadata.page_index',
+            'total_items': '$metadata.total',
+            'items': '$data'
+        }
+    }
+    
+])
