@@ -1,0 +1,121 @@
+<div>
+    <!--Câu hỏi loại 1 Single Answer (Checkboxes)-->
+    <div ng-if="quesType == 1">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. <span style="color: red;" ng-if="quesOption.RequireAnswer">*</span>
+            {{quesTitle}}
+        </p>
+        <div>
+            {{data.dataModel}}
+            <label class="radio" ng-repeat="item in quesData">
+                <input type="radio" ng-model="data.dataModel" ng-value="{{item[quesDataVal]}}" id="noti_finish_course{{$index}}">
+                <span for="noti_finish_course{{$index}}" class="checkround"></span>
+                {{item[quesDataCap]}}
+            </label>
+        </div>
+        <div ng-if="quesOption.OtherField">
+            <label class="col-xs-2 col-sm-2 zb-form-label">Đáp án khác</label>
+            <div class="col-xs-10 col-sm-10">
+                <input-text ng-model="data.dataModel " class="txtText" />
+            </div>
+        </div>
+    </div>
+    <!--Câu hỏi loại 2 Multiple Answers (Checkboxes)-->
+    <div ng-if="quesType == 2">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. {{quesTitle}}
+        </p>
+        <div class="checkbox zb-form-checkbox">
+            <div ng-repeat="item in quesData">
+                <label class="custom-checkbox" style="width: 100%;">
+                    <input type="checkbox" ng-click='onCompleteTodo(item[quesDataVal])' /><span>{{item[quesDataCap]}}</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    <!--Câu hỏi loại 3 Single Answer (Dropdown)-->
+    <div ng-if="quesType == 3">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. {{quesTitle}}
+        </p>
+        <div>
+            @*<input-select data-list="quesData"
+                          ng-model="data.dataModel"
+                          placeholder=""
+                          data-value="{{quesDataVal}}"
+                          data-caption="{{quesDataCap}}" />*@
+            <input-select placeholder="asdasd"  
+                          ng-model="data.dataModel"
+                          source="quesData"
+                          caption-field="{{quesDataCap}}"
+                          value-field="{{quesDataVal}}" />
+        </div>
+        <div ng-if="quesOption.OtherField">
+            <label class="col-xs-2 col-sm-2 zb-form-label">Đáp án khác</label>
+            <div class="col-xs-10 col-sm-10">
+                <input-text ng-model="data.dataModel " class="txtText" />
+            </div>
+        </div>
+    </div>
+    <!--Câu hỏi loại 4 Multiple Answers (Dropdown)-->
+    <div ng-if="quesType == 4">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. {{quesTitle}}
+        </p>
+        <div>
+            <input-select placeholder="asdasd"  
+                          ng-model="data.dataModel"
+                          source="quesData"
+                          caption-field="{{quesDataCap}}"
+                          multi="true"
+                          value-field="{{quesDataVal}}" />
+        </div>
+    </div>
+    <!--Câu hỏi loại 5 Open Text-->
+    <div ng-if="quesType == 5">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. <span style="color: red;" ng-if="quesOption.RequireAnswer">*</span>
+            {{quesTitle}}
+        </p>
+        <div ng-if="quesOption.LimitCharacters">
+            <input-text ng-model="data.dataModel " class="txtText" />
+        </div>
+        <div ng-if="!quesOption.LimitCharacters">
+            <input-textarea class="txtText" rows="2" ng-model="data.dataModel"></input-textarea>
+        </div>
+    </div>
+    <!--Câu hỏi loại 6 Date-->
+    <div ng-if="quesType == 6">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. {{quesTitle}}
+        </p>
+        <div class="checkbox zb-form-checkbox">
+            <bs-datetime-picker default-value="{{quesOption.DefaultDate}}"
+                                default-format="{{quesOption.DateFormat}}"
+                                ng-model="data.dataModel"></bs-datetime-picker>
+        </div>
+    </div>
+    <!--Câu hỏi loại 7 Matching-->
+    <div ng-if="quesType == 7">
+        <p ng-if="data.dataErorr" style="color: red;">Erorr: {{data.dataErorr}}</p>
+        <p style="font-weight:bold">
+            {{quesIndex}}. {{quesTitle}}
+        </p>
+        <div class="form-group zb-form-group" ng-repeat="item in ItemList">
+            <label class="col-xs-2 col-sm-2 zb-form-label">{{item.ItemContent}}</label>
+            <div class="col-xs-10 col-sm-10">
+                <input-select data-list="quesData"
+                              ng-model="data.dataModel"
+                              placeholder=""
+                              data-value="{{quesDataVal}}"
+                              data-caption="{{quesDataCap}}" />
+            </div>
+        </div>
+    </div>
+</div>
