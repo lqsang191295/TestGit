@@ -1,0 +1,32 @@
+{{$dataModel}}
+            <template-question ques-type="$dataQues.type"
+                               ques-title="$dataQues.title"
+                               ques-data="$dataQues.data"
+                               ques-data-val="value"
+                               ques-data-cap="caption"
+                               ng-model="$dataModel"></template-question>
+
+            {{$dataModel2}}
+            <template-question ques-type="$dataQues2.type"
+                               ques-title="$dataQues2.title"
+                               ques-data="$dataQues2.data"
+                               ques-data-val="value"
+                               ques-data-cap="caption"
+                               ng-model="$dataModel2"></template-question>
+
+            {{$dataModel3}}
+            <template-question ques-type="$dataQues3.type"
+                               ques-title="$dataQues3.title"
+                               ques-data="$dataQues3.data"
+                               ques-data-val="value"
+                               ques-data-cap="caption"
+                               ng-model="$dataModel3"></template-question>
+
+            {{$dataModel4}}
+            <template-question ques-type="$dataQues4.type"
+                               ques-title="$dataQues4.title"
+                               ques-data="$dataQues4.data"
+                               ques-data-val="value"
+                               ques-data-cap="caption"
+                               ng-model="$dataModel4"></template-question>
+ 
