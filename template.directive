@@ -1,0 +1,53 @@
+(function() {
+    'use strict';
+
+    angular.module('ZApp.controls.inputs')
+        .directive('templateQuestion', templateQuestion);
+
+    function templateQuestion($rootScope) {
+        return {
+            restrict: 'E',
+            replace: true,
+            transclude: true,
+            scope: {
+                ngChange: "=",
+                quesType: "=",
+                quesTitle: "=", // Tên câu hỏi
+                quesData: "=", // Dữ liệu câu hỏi
+                quesDataCap: "@", // Hiện caption vào radio
+                quesDataVal: "@", // Lấy value vào radio
+                quesIndex: "=", // Thứ tự câu hỏi
+                ngModel: "=", // Data cần trả ra
+                quesOption: "=" // cấu hình của câu hỏi
+            },
+            templateUrl: $rootScope.$getViewPath("template$template"),
+            link: function ($scope, elem, attr) {
+                $scope.data = {};
+                getData();
+                $scope.$watch("data.dataModel", function (v) {
+                    console.log(v);
+                    $scope.ngModel = v;
+                })
+                $scope.onCompleteTodo = function (val) {
+                    console.log(val);
+                    var idx = $scope.data.dataModel.indexOf(val);
+                    if (idx != -1) {
+                        $scope.data.dataModel.splice(idx, 1);
+                    } else {
+                        $scope.data.dataModel.push(val);
+                    }
+                }
+
+                function getData() {
+                    if ($scope.quesType == 1) { // Single Answer (Checkboxes)
+                        $scope.data.dataModel = $scope.ngModel || {};
+                    } else if ($scope.quesType == 2) { // Multiple Answers (Checkboxes)
+                        $scope.data.dataModel = $scope.ngModel ? $scope.ngModel.split(",") : [];
+                    } else if ($scope.quesType == 3) { // Single Answer (Dropdown)
+                        $scope.data.dataModel = $scope.ngModel || {};
+                    }
+                }
+            }
+        }
+    }
+})();
