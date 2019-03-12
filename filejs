@@ -1,0 +1,48 @@
+
+            $scope.$dataModel = null;
+            $scope.$dataQues = {
+                type: 1,
+                data: [
+                    { value: 1, caption: "Cau hoi 1" },
+                    { value: 2, caption: "Cau hoi 2" },
+                    { value: 3, caption: "Cau hoi 3" },
+                    { value: 4, caption: "Cau hoi 4" }
+                ],
+                title: "Cau hoi ne may 3"
+            }
+
+            $scope.$dataModel2 = null;
+            $scope.$dataQues2 = {
+                type: 2,
+                data: [
+                    { value: 1, caption: "Cau hoi 1" },
+                    { value: 2, caption: "Cau hoi 2" },
+                    { value: 3, caption: "Cau hoi 3" },
+                    { value: 4, caption: "Cau hoi 4" }
+                ],
+                title: "Cau hoi ne may 3"
+            }
+
+            $scope.$dataModel3 = null;
+            $scope.$dataQues3 = {
+                type: 3,
+                data: [
+                    { value: 1, caption: "Cau hoi 1" },
+                    { value: 2, caption: "Cau hoi 2" },
+                    { value: 3, caption: "Cau hoi 3" },
+                    { value: 4, caption: "Cau hoi 4" }
+                ],
+                title: "Cau hoi ne may 3"
+            }
+
+            $scope.$dataModel4 = null;
+            $scope.$dataQues4 = {
+                type: 4,
+                data: [
+                    { value: 1, caption: "Cau hoi 1" },
+                    { value: 2, caption: "Cau hoi 2" },
+                    { value: 3, caption: "Cau hoi 3" },
+                    { value: 4, caption: "Cau hoi 4" }
+                ],
+                title: "Cau hoi ne may 3"
+            }
