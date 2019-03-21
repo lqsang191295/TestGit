@@ -1,0 +1,96 @@
+	<?php 
+	if( rwmb_get_value('rima_display_page_footer') && is_singular() ) {
+
+	} elseif( rwmb_get_value('rima_display_custom_footer') && rwmb_get_value('rima_display_custom_footer') !== 'none' && is_singular() ){
+		/*echo '<footer id="footer-custom"><div class="container">';
+		if( rwmb_get_value('rima_display_custom_footer') === 'none' || !get_post_status(rwmb_get_value('rima_display_custom_footer')) ){
+			esc_html_e('Go to dashboard and create your own footer layout. After there select it under theme options -> footer -> custom footer layout', 'rima');
+		} else {
+			rima_get_custom_footer( rwmb_get_value('rima_display_custom_footer'), true );
+		}
+		echo '</div></footer>';*/
+	} elseif( get_theme_mod('rima_footer_layout', 'layout-1') === 'custom' ){
+		/*echo '<footer id="footer-custom"><div class="container">';
+		if( get_theme_mod('rima_custom_footer', 'none') === 'none' || !get_post_status(get_theme_mod('rima_custom_footer', 'none')) ){
+			esc_html_e('Go to dashboard and create your own footer layout. After there select it under theme options -> footer -> custom footer layout', 'rima');
+		} else {
+			rima_get_custom_footer( get_theme_mod('rima_custom_footer', 'none') , true );
+		}
+		
+		echo '</div></footer>';*/
+	} elseif( get_theme_mod('rima_footer_layout', 'layout-1') === 'layout-2'){ ?>	
+			<?php if( get_theme_mod('rima_footer_copyright', '') != '' || get_theme_mod('rima_footer_socials', true) ) { ?>
+				<footer id="footer" class="footer-layout-2">
+					<div class="container">
+						<?php if( get_theme_mod('rima_footer_instagram_access_token', '') != '' && rwmb_get_value('rima_display_instagram') != 'disbale') { 
+							$hide_items = $hide_link = '';
+							if(rwmb_get_value('rima_display_instagram') == 'disable-items') {
+								$hide_items = true;
+							}
+							if(rwmb_get_value('rima_display_instagram') == 'disable-link'){
+								$hide_link = true;
+							}
+							?>
+							<div class="row">
+								<div class="span12">
+									<?php if( function_exists('rima_get_social_links') ){
+											echo do_shortcode('[rimainstagram title="'.get_theme_mod('rima_footer_instagram_title', ' ').'" hide_items="false" access_token="'.get_theme_mod('rima_footer_instagram_access_token', '').'" pics="4" pics_per_row="4" hide_link="true"]');
+										}
+									?>
+								</div>
+							</div>
+						<?php } ?>
+						<div class="row">
+							<div class="span12 flex-container">
+								<?php if( get_theme_mod('rima_footer_copyright', '') != '' ) { ?>
+									<div id="footer-copy-block">
+										<div class="copyright-text"><?php echo get_theme_mod('rima_footer_copyright', ''); ?></div>
+									</div><!-- end footer-nav-block -->
+								<?php } ?>	
+								<?php if( get_theme_mod('rima_footer_socials', true) && function_exists('rima_get_social_links') ) { echo rima_get_social_links(); } ?>
+							</div>
+						</div>
+					</div>
+				</footer>
+			<?php } ?>	
+			<div class="clear"></div>
+		<?php
+	} else { ?>	
+			<?php if( get_theme_mod('rima_footer_instagram_access_token', '') != '' && rwmb_get_value('rima_display_instagram') != 'disbale') { 
+				$hide_items = $hide_link = '';
+				if(rwmb_get_value('rima_display_instagram') == 'disable-items') {
+					$hide_items = true;
+				}
+				if(rwmb_get_value('rima_display_instagram') == 'disable-link'){
+					$hide_link = true;
+				}
+				?>
+				<div id="before-footer">
+					<?php the_widget( 'rima_widget_instagram', array('title'=>'', 'insta_title'=> get_theme_mod('rima_footer_instagram_title', ''), 'hide_items' => $hide_items, 'hide_link' => $hide_link, 'access_token'=>get_theme_mod('rima_footer_instagram_access_token', ''), 'pics'=>'6', 'pics_per_row'=>'6')); ?>
+				</div>
+			<?php } ?>
+			<?php if( get_theme_mod('rima_footer_copyright', '') != '' || get_theme_mod('rima_footer_socials', true) ) { ?>
+				<footer id="footer">
+					<div class="container">
+						<div class="span4">
+							<?php if( get_theme_mod('rima_footer_copyright', '') != '' ) { ?>
+								<div id="footer-copy-block">
+									<div class="copyright-text"><?php echo get_theme_mod('rima_footer_copyright', ''); ?></div>
+								</div><!-- end footer-nav-block -->
+							<?php } ?>	
+						</div>
+						<div class="span4"></div>
+						<div class="span4">
+							<?php if( get_theme_mod('rima_footer_socials', true) && function_exists('rima_get_social_links') ) { echo rima_get_social_links(); } ?>
+						</div>	
+					</div>
+				</footer>
+			<?php } ?>	
+			<div class="clear"></div>
+		<?php
+	} ?>
+		</div> <!-- end boxed -->
+
+	<?php wp_footer(); ?>
+	</body>
+</html>
