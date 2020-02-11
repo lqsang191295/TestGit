@@ -1,0 +1,9 @@
+$("button").click(() => {
+  // document.querySelector('.hello').scrollIntoView({ 
+  //   behavior: 'smooth' 
+  // });
+
+  $('html,body').animate({
+        scrollTop: $("#two").offset().top
+    }, 'slow');
+})
